@@ -1,0 +1,35 @@
+node_modules/
+dist/
+build/
+.DS_Store
+Thumbs.db
+
+# Ambiente / segredos — NUNCA commitar
+.env
+.env.*
+!.env.example
+*.serviceaccount.json
+serviceAccount*.json
+firebase-adminsdk*.json
+
+# Logs
+npm-debug.log*
+yarn-error.log*
+*.log
+
+# Caches
+.vite/
+.turbo/
+coverage/
+.eslintcache
+*.tsbuildinfo
+
+# Editores
+.vscode/*
+!.vscode/extensions.json
+.idea/
+
+# Firebase CLI
+.firebase/
+firebase-debug.log
+firestore-debug.log

@@ -1,0 +1,51 @@
+# =============================================================================
+# AM Marketing — manifesto do Slack App
+#
+# Como usar:
+#   1. https://api.slack.com/apps > Create New App > From an app manifest
+#   2. Escolha o workspace do Grupo Alcina Maria e cole este arquivo (aba YAML).
+#   3. Install to Workspace.
+#   4. Copie o Bot User OAuth Token (xoxb-…) e o Signing Secret para as
+#      variáveis SLACK_BOT_TOKEN e SLACK_SIGNING_SECRET do backend.
+#
+# ATENÇÃO antes de colar: troque `SEU-BACKEND` abaixo pelo host real do Web
+# Service do Render. O Slack valida a URL de interatividade na hora de salvar,
+# então o backend precisa já estar no ar respondendo em /slack/events.
+#
+# Se o app for criado antes do deploy do backend, crie assim mesmo e depois
+# ajuste a URL em Interactivity & Shortcuts.
+# =============================================================================
+
+display_information:
+  name: AM Marketing
+  description: Requisições de itens do Marketing do Grupo Alcina Maria
+  long_description: >-
+    Recebe e decide as requisições de materiais do Marketing — carrinho, tenda,
+    mesas, cadeiras e bancada. A administradora aprova ou reprova direto por
+    aqui, e quem pediu recebe a resposta na hora, com o link do ticket no app.
+  background_color: "#0b0b0d"
+
+features:
+  bot_user:
+    display_name: AM Marketing
+    always_online: true
+
+oauth_config:
+  scopes:
+    bot:
+      # Enviar as DMs (card da administradora, confirmações e decisões).
+      - chat:write
+      # Abrir o canal de DM com quem ainda não conversou com o bot.
+      - im:write
+
+settings:
+  interactivity:
+    is_enabled: true
+    # Endpoint do ExpressReceiver do Bolt. Precisa ser HTTPS e público.
+    request_url: https://SEU-BACKEND.onrender.com/slack/events
+
+  # O app não escuta eventos do workspace — só reage a cliques e ao envio do
+  # modal —, então nenhum event subscription é necessário.
+  org_deploy_enabled: false
+  socket_mode_enabled: false
+  token_rotation_enabled: false

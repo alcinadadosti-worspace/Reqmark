@@ -1,0 +1,39 @@
+{
+  "//": [
+    "Índices compostos exigidos pelas consultas do app.",
+    "Publique junto das regras: firebase deploy --only firestore",
+    "Se aparecer 'The query requires an index' no console do navegador, o link do",
+    "erro cria o índice que falta — traga-o também para cá."
+  ],
+  "indexes": [
+    {
+      "//": "Consulta de ocupação: status in ['pending','approved'] + endDate >= hoje-60d. Usada pelo catálogo, pela agenda e pelo wizard.",
+      "collectionGroup": "requests",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "endDate", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "//": "Minhas requisições: requesterId == eu, mais recentes primeiro.",
+      "collectionGroup": "requests",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "requesterId", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": [
+    {
+      "//": "Catch-up do backend: collectionGroup('events').where('notify.pending','==',true). Consultas de grupo de coleção precisam do escopo declarado.",
+      "collectionGroup": "events",
+      "fieldPath": "notify.pending",
+      "indexes": [
+        { "order": "ASCENDING", "queryScope": "COLLECTION" },
+        { "order": "ASCENDING", "queryScope": "COLLECTION_GROUP" }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,50 @@
+/**
+ * Variaveis de ambiente do backend.
+ *
+ * Tudo que e segredo vive so aqui (restricao 6). O processo se recusa a subir
+ * sem o essencial: falhar no boot com uma mensagem clara e muito melhor do que
+ * descobrir a falta de um token na primeira requisicao do Slack.
+ */
+import 'dotenv/config';
+
+function required(name: string): string {
+  const value = process.env[name]?.trim();
+  if (!value) {
+    throw new Error(
+      `Variavel de ambiente ausente: ${name}. Veja backend/.env.example e o README (secao Deploy).`
+    );
+  }
+  return value;
+}
+
+function optional(name: string, fallback = ''): string {
+  return process.env[name]?.trim() || fallback;
+}
+
+export const env = {
+  // Slack
+  slackBotToken: required('SLACK_BOT_TOKEN'),
+  slackSigningSecret: required('SLACK_SIGNING_SECRET'),
+  adminSlackId: optional('ADMIN_SLACK_ID', 'U09F9LWM6MC'),
+
+  // Firebase
+  firebaseServiceAccountB64: required('FIREBASE_SERVICE_ACCOUNT_B64'),
+
+  // Acesso administrativo
+  adminPin: required('ADMIN_PIN'),
+  adminTokenSecret: required('ADMIN_TOKEN_SECRET'),
+
+  // Rede
+  appUrl: optional('APP_URL', 'http://localhost:5173').replace(/\/+$/, ''),
+  port: Number(optional('PORT', '8080')),
+
+  isProduction: process.env.NODE_ENV === 'production',
+};
+
+/** Validade do token administrativo: 12 horas (secao 10). */
+export const ADMIN_TOKEN_TTL_MS = 12 * 60 * 60 * 1000;
+
+/** Monta o link para um ticket no app. */
+export function ticketUrl(requestId: string): string {
+  return `${env.appUrl}/requisicoes/${requestId}`;
+}
