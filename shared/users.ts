@@ -1,11 +1,16 @@
-/**
- * Apendice A da especificacao — Slack ID -> nome completo.
+﻿/**
+ * Cadastro de pessoas — Apendice A da especificacao (Slack ID -> nome completo).
  *
- * Fonte unica da lista de pessoas. `U09F9LWM6MC` (Suzana Martins Tavares) e a
- * administradora; todos os demais entram como `requester`.
+ * FONTE UNICA, compartilhada pelos dois pacotes:
+ *   - o backend usa em `scripts/seed.ts` para popular a colecao `users`;
+ *   - o frontend usa no modo demonstracao, para a tela de identidade ter a
+ *     lista real — a busca so faz sentido testada em ~110 nomes, nao em 15.
  *
- * Para adicionar alguem: acrescente a linha aqui e rode `npm run seed` de novo
- * (e idempotente, nao duplica ninguem).
+ * `U09F9LWM6MC` (Suzana Martins Tavares) e a administradora; os demais entram
+ * como `requester`.
+ *
+ * Para adicionar alguem: acrescente a linha aqui, rode `npm run sync:shared`
+ * na raiz e depois `npm run seed` (idempotente, nao duplica ninguem).
  */
 export interface SeedUser {
   slackId: string;
@@ -123,3 +128,4 @@ export const USERS: SeedUser[] = [
   { slackId: 'U0BGKC2GLMV', name: 'Sabrina Barbosa Machado Mariano' },
   { slackId: 'U0BG84EDWVC', name: 'Tayna Monaisa Vasconcelos Santos' },
 ];
+

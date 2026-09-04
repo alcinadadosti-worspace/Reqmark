@@ -176,6 +176,11 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const value = useMemo<AppData>(() => {
+    // Ordena aqui, e não no Firestore: `orderBy('name')` ordena por bytes UTF-8,
+    // então "Ângela" cairia depois de "Zé". Com `localeCompare('pt-BR')` a lista
+    // fica na ordem que uma pessoa espera — e igual no modo demonstração.
+    const sortedUsers = [...users].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
+
     const itemsById = new Map(items.map((item) => [item.id, item]));
     const stockById = new Map<string, StockItemRef>(
       items.map((item) => [item.id, { id: item.id, name: item.name, quantity: item.quantity }])
@@ -188,7 +193,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       activeItems: items.filter((item) => item.active),
       itemsById,
       stockById,
-      users,
+      users: sortedUsers,
       settings,
       occupancyRequests,
       occupancy: buildOccupancy(occupancyRequests),

@@ -15,7 +15,7 @@
 import { collections, db, serverTimestamp } from '../src/firebase';
 import { env } from '../src/env';
 import { DEFAULT_PURPOSE_TYPES, type ItemInput } from '../src/shared/types';
-import { USERS } from './users';
+import { USERS } from '../src/shared/users';
 
 const ADMIN_SLACK_ID = 'U09F9LWM6MC';
 

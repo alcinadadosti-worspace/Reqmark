@@ -10,6 +10,7 @@
  * item esgotado, pré-reserva concorrente, conflito com aprovada, e devolução.
  */
 import { addDays, today } from '@/shared/dates';
+import { USERS } from '@/shared/users';
 import type {
   AppSettings,
   AppUser,
@@ -37,26 +38,24 @@ function hoursAgo(hours: number): TimestampLike {
 const D = today();
 
 // ---------------------------------------------------------------------------
-// Pessoas — um recorte do Apêndice A, com a administradora
+// Pessoas — o Apêndice A inteiro
 // ---------------------------------------------------------------------------
 
-export const DEMO_USERS: AppUser[] = [
-  { slackId: 'U09F9LWM6MC', name: 'Suzana Martins Tavares', role: 'admin', active: true },
-  { slackId: 'U07KP9J5BLP', name: 'Rafaela Alves Mendes', role: 'requester', active: true },
-  { slackId: 'U07KPE840MD', name: 'Erick Café Santos Júnior', role: 'requester', active: true },
-  { slackId: 'U07Q9HE3KGA', name: 'Amanda Santos Costa', role: 'requester', active: true },
-  { slackId: 'U087M32A18B', name: 'Luan Santos de Oliveira', role: 'requester', active: true },
-  { slackId: 'U08JJ7VF0N6', name: 'Nathália Vieira Lima', role: 'requester', active: true },
-  { slackId: 'U0895CZ8HU7', name: 'Carlos Eduardo Silva de Oliveira', role: 'requester', active: true },
-  { slackId: 'U08K69RC01H', name: 'Letícia Soares Belo', role: 'requester', active: true },
-  { slackId: 'U07LP4JSN9K', name: 'João Antonio Tavares Santos', role: 'requester', active: true },
-  { slackId: 'U08F9KK0AAG', name: 'Ana Clara de Matos Chagas', role: 'requester', active: true },
-  { slackId: 'U0A3P2QB5P0', name: 'Hugo Castro Lopes', role: 'requester', active: true },
-  { slackId: 'U08PPAAH5PT', name: 'Luciano Torres', role: 'requester', active: true },
-  { slackId: 'U09QM89NV5W', name: 'Alcina', role: 'requester', active: true },
-  { slackId: 'U0AKMS2LNEA', name: 'Eduarda Pereira Costa Silva', role: 'requester', active: true },
-  { slackId: 'U08M7D0EVR9', name: 'Natali de Souza Gonzaga', role: 'requester', active: true },
-];
+const ADMIN_SLACK_ID = 'U09F9LWM6MC';
+
+/**
+ * A equipe completa, do mesmo cadastro que o seed usa (`@/shared/users`).
+ *
+ * De propósito não é um recorte: a tela de identidade existe para achar uma
+ * pessoa entre ~110, e uma demonstração com 15 nomes esconderia exatamente o
+ * que a busca e a rolagem precisam resolver.
+ */
+export const DEMO_USERS: AppUser[] = USERS.map((user) => ({
+  slackId: user.slackId,
+  name: user.name,
+  role: user.slackId === ADMIN_SLACK_ID ? 'admin' : 'requester',
+  active: true,
+}));
 
 // ---------------------------------------------------------------------------
 // Itens — os cinco do seed
