@@ -290,23 +290,31 @@ conversa com quem nunca falou com ele).
 > **Peça para a Suzana mandar um "oi" para o bot AM Marketing uma vez.** Alguns
 > workspaces bloqueiam a primeira DM de um app até haver essa interação.
 
-### 5.3 Render — Web Service (backend)
+### 5.3 Render — um único Web Service
+
+O backend serve o app junto com a API, então **um serviço só** dá conta de
+tudo. Mesma origem: não existe CORS para configurar, nem URL para casar entre
+dois serviços.
 
 No painel do Render: **New → Web Service** → conecte o repositório do GitHub.
 
 | Campo | Valor |
 | --- | --- |
-| **Name** | `am-marketing-api` |
+| **Name** | `am-marketing` |
 | **Language / Runtime** | `Node` |
 | **Branch** | `main` |
-| **Root Directory** | `backend` |
-| **Build Command** | `npm ci && npm run build` |
+| **Root Directory** | *(deixe em branco — é a raiz do repositório)* |
+| **Build Command** | `npm run render-build` |
 | **Start Command** | `npm start` |
 | **Instance Type** | **Free** |
 | **Health Check Path** | `/health` |
 | **Region** | `Oregon` (ou a mais próxima disponível no free) |
 
-Em **Environment → Environment Variables**, adicione:
+O `render-build` instala e compila os dois pacotes; o `npm start` sobe o
+backend, que serve `frontend/dist` e responde `/slack/events`, `/admin/*` e
+`/health` na mesma porta.
+
+Em **Environment → Environment Variables**:
 
 | Chave | Valor |
 | --- | --- |
@@ -318,7 +326,12 @@ Em **Environment → Environment Variables**, adicione:
 | `ADMIN_SLACK_ID` | `U09F9LWM6MC` |
 | `ADMIN_PIN` | o PIN da Suzana (6+ dígitos) |
 | `ADMIN_TOKEN_SECRET` | veja abaixo |
-| `APP_URL` | preenchido no passo 5.4 |
+| `VITE_FIREBASE_API_KEY` | do passo 5.1.5 |
+| `VITE_FIREBASE_AUTH_DOMAIN` | do passo 5.1.5 |
+| `VITE_FIREBASE_PROJECT_ID` | do passo 5.1.5 |
+| `VITE_FIREBASE_STORAGE_BUCKET` | do passo 5.1.5 |
+| `VITE_FIREBASE_MESSAGING_SENDER_ID` | do passo 5.1.5 |
+| `VITE_FIREBASE_APP_ID` | do passo 5.1.5 |
 
 Para gerar o `ADMIN_TOKEN_SECRET`:
 
@@ -326,60 +339,43 @@ Para gerar o `ADMIN_TOKEN_SECRET`:
 node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 ```
 
-Faça o deploy. Quando terminar, abra `https://am-marketing-api.onrender.com/health`
-— deve responder `{"ok":true,...}`.
+> **As variáveis `VITE_*` são lidas durante o BUILD**, não na execução — é o
+> Vite que as embute no bundle. Se mudar uma delas depois, precisa refazer o
+> deploy (*Manual Deploy → Clear build cache & deploy*); salvar não basta.
+
+Não é preciso configurar `APP_URL` nem `VITE_API_URL`:
+- `VITE_API_URL` vazia significa "mesma origem", que é justamente o caso;
+- `APP_URL` cai por padrão no `RENDER_EXTERNAL_URL`, que o Render preenche
+  sozinho com a URL do serviço. Só informe se usar domínio próprio.
+
+Faça o deploy e abra `https://am-marketing.onrender.com/health` — deve
+responder `{"ok":true,...}`. A raiz (`/`) já mostra o app.
 
 **Agora volte ao Slack App** → *Interactivity & Shortcuts* → ative e ponha:
 
 ```
-https://am-marketing-api.onrender.com/slack/events
+https://am-marketing.onrender.com/slack/events
 ```
 
 O Slack valida a URL na hora de salvar; se der erro, confira se o `/health`
 está respondendo.
 
-### 5.4 Render — Static Site (frontend)
+<details>
+<summary>Alternativa: dois serviços (Static Site + Web Service)</summary>
 
-**New → Static Site** → mesmo repositório.
+Continua funcionando, e tem uma vantagem real: o Static Site **nunca dorme**,
+então o app abre instantâneo mesmo com o backend hibernando.
 
-| Campo | Valor |
-| --- | --- |
-| **Name** | `am-marketing-app` |
-| **Branch** | `main` |
-| **Root Directory** | `frontend` |
-| **Build Command** | `npm ci && npm run build` |
-| **Publish Directory** | `dist` |
+Crie o Web Service com `Root Directory: backend`, build `npm ci && npm run build`
+e start `npm start`; e um **Static Site** com `Root Directory: frontend`, build
+`npm ci && npm run build`, publish `dist` e um rewrite de `/*` para
+`/index.html`.
 
-Em **Redirects/Rewrites**, adicione **uma** regra — sem ela, abrir
-`/requisicoes/abc` direto no navegador dá 404:
-
-| Source | Destination | Action |
-| --- | --- | --- |
-| `/*` | `/index.html` | **Rewrite** |
-
-Em **Environment Variables**:
-
-| Chave | Valor |
-| --- | --- |
-| `NODE_VERSION` | `22` |
-| `VITE_FIREBASE_API_KEY` | do passo 5.1.5 |
-| `VITE_FIREBASE_AUTH_DOMAIN` | do passo 5.1.5 |
-| `VITE_FIREBASE_PROJECT_ID` | do passo 5.1.5 |
-| `VITE_FIREBASE_STORAGE_BUCKET` | do passo 5.1.5 |
-| `VITE_FIREBASE_MESSAGING_SENDER_ID` | do passo 5.1.5 |
-| `VITE_FIREBASE_APP_ID` | do passo 5.1.5 |
-| `VITE_API_URL` | `https://am-marketing-api.onrender.com` (sem barra no fim) |
-
-Deploy. Anote a URL final (algo como
-`https://am-marketing-app.onrender.com`).
-
-**Feche o círculo:** volte ao Web Service → *Environment* → preencha
-`APP_URL` com essa URL (com `https://`, **sem** barra no final) e salve. O
-serviço reinicia sozinho.
-
-`APP_URL` faz duas coisas: restringe o CORS das rotas `/admin/*` e monta os
-links "Abrir no app" das mensagens do Slack. Se ficar errada, o painel da
-Suzana para de funcionar com erro de CORS.
+Nesse arranjo as duas origens são diferentes, então é obrigatório preencher:
+`VITE_API_URL` (no site) com a URL da API e `APP_URL` (na API) com a URL do
+site — as duas com `https://` e **sem** barra no final. Uma barra sobrando
+quebra o CORS do painel.
+</details>
 
 ### 5.5 Seed — dados iniciais
 
@@ -423,7 +419,7 @@ Configure um monitor gratuito batendo em `/health` a cada 10 minutos:
 plano gratuito):
 
 1. *Add New Monitor* → tipo **HTTP(s)**
-2. URL: `https://am-marketing-api.onrender.com/health`
+2. URL: `https://am-marketing.onrender.com/health`
 3. *Monitoring Interval*: **10 minutos**
 
 **cron-job.org** ([cron-job.org](https://cron-job.org), gratuito):
@@ -532,7 +528,7 @@ navegador de cada aparelho.
 Quase sempre é **cold start**: o backend estava dormindo e não respondeu nos 3
 segundos que o Slack espera.
 
-1. Abra `https://am-marketing-api.onrender.com/health` e espere a resposta
+1. Abra `https://am-marketing.onrender.com/health` e espere a resposta
    (~1 min na primeira vez).
 2. Volte ao Slack e clique de novo — agora vai.
 3. Se pressa: use o botão **🔗 Abrir no app** e decida pelo painel.
@@ -570,8 +566,11 @@ Para não repetir isso em outro ambiente, os índices estão em
 <details>
 <summary><strong>O painel da Suzana dá erro de CORS ou "sessão expirada"</strong></summary>
 
-- **CORS:** a `APP_URL` do Web Service precisa ser **idêntica** à URL do Static
-  Site — com `https://` e **sem** barra no final. Um `/` sobrando já quebra.
+- **CORS:** com um único Web Service isso não deveria acontecer — app e API têm
+  a mesma origem. Se aparecer, é porque `VITE_API_URL` foi preenchida apontando
+  para outro endereço: deixe-a **vazia** e refaça o deploy.
+  No arranjo de dois serviços, a `APP_URL` da API precisa ser **idêntica** à URL
+  do Static Site, com `https://` e **sem** barra no final.
 - **Sessão expirada:** o token dura 12 horas e vive na aba do navegador. É só
   informar o PIN de novo.
 - **"PIN incorreto" mesmo estando certo:** depois de 8 tentativas erradas o

@@ -26,7 +26,13 @@ export const firebaseConfig = {
   appId: read('VITE_FIREBASE_APP_ID'),
 };
 
-/** URL do backend, sem barra no final. */
+/**
+ * URL do backend, sem barra no final.
+ *
+ * Vazia significa MESMA ORIGEM — que e o caso quando o app e a API sobem juntos
+ * num unico Web Service (as chamadas viram `/admin/...` relativas). Só precisa
+ * ser preenchida quando o frontend é publicado à parte, como Static Site.
+ */
 export const API_URL = read('VITE_API_URL').replace(/\/+$/, '');
 
 /** Nomes das variaveis que faltam — a UI mostra isso em vez de quebrar em branco. */

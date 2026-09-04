@@ -12,6 +12,8 @@
     "dev:front": "npm --prefix frontend run dev",
     "dev:back": "npm --prefix backend run dev",
     "build": "npm --prefix frontend run build && npm --prefix backend run build",
+    "render-build": "npm --prefix frontend ci && npm --prefix frontend run build && npm --prefix backend ci && npm --prefix backend run build",
+    "start": "node backend/dist/index.js",
     "typecheck": "npm --prefix frontend run typecheck && npm --prefix backend run typecheck",
     "lint": "npm --prefix frontend run lint && npm --prefix backend run lint",
     "test": "npm --prefix frontend run test",

@@ -34,8 +34,18 @@ export const env = {
   adminPin: required('ADMIN_PIN'),
   adminTokenSecret: required('ADMIN_TOKEN_SECRET'),
 
-  // Rede
-  appUrl: optional('APP_URL', 'http://localhost:5173').replace(/\/+$/, ''),
+  /**
+   * URL publica do app — usada nos links "Abrir no app" das mensagens do Slack
+   * e como origem permitida no CORS.
+   *
+   * Com tudo num unico Web Service, o proprio Render informa a URL em
+   * `RENDER_EXTERNAL_URL`, entao `APP_URL` so precisa ser preenchida quando o
+   * frontend e publicado a parte (Static Site) ou com dominio proprio.
+   */
+  appUrl: optional('APP_URL', optional('RENDER_EXTERNAL_URL', 'http://localhost:8080')).replace(
+    /\/+$/,
+    ''
+  ),
   port: Number(optional('PORT', '8080')),
 
   isProduction: process.env.NODE_ENV === 'production',

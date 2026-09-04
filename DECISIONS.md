@@ -244,7 +244,53 @@ A administradora ganhou um caminho próprio e discreto no rodapé
 ("Entrar como administradora"), que pede o PIN direto: ela não precisa se
 procurar na lista, e o botão deixa claro que aquele acesso é diferente.
 
-## 18. Cold start do Render free
+## 18. Um único Web Service serve o app e a API
+
+A pedido do cliente, o deploy padrão é **um serviço só**: o backend serve o
+`frontend/dist` junto com `/slack/events`, `/admin/*` e `/health`
+(`backend/src/static.ts`).
+
+O que isso elimina — e não é pouco, porque era exatamente onde o primeiro deploy
+travava:
+
+- **CORS deixa de existir.** Mesma origem, sem preflight.
+- **Nenhuma URL para casar.** `VITE_API_URL` vazia já significa "mesma origem",
+  e `APP_URL` cai no `RENDER_EXTERNAL_URL` que o Render preenche sozinho. Some
+  o passo de "volte no outro serviço e cole a URL", e com ele a classe de erro
+  da barra sobrando no final.
+- Um serviço para monitorar, um deploy para acompanhar.
+
+O custo, dito sem maquiagem: o Static Site nunca dormia, então o app abria
+instantâneo mesmo com o backend hibernando. Agora o app inteiro fica sujeito ao
+cold start de ~1 min. Na prática empata, porque o monitor de keep-alive já era
+obrigatório por causa do Slack (que exige `ack` em 3 s) — e ele resolve os dois
+casos de uma vez. O arranjo de dois serviços continua funcionando e está
+documentado no README para quem preferir.
+
+Detalhes que o `static.ts` cuida: as rotas da API são resolvidas antes do
+fallback da SPA; um caminho com extensão que não existe devolve 404 em vez de
+`index.html` (senão o cache do PWA quebraria); `sw.js` e `index.html` vão sem
+cache, e os arquivos com hash no nome vão como `immutable`.
+
+## 19. O processo não morre mais por causa do Slack
+
+Ao testar o serviço único, o backend caiu no boot com
+`Error: An API error occurred: invalid_auth` — uma **rejeição não tratada**
+vinda de uma chamada que o próprio Bolt faz em segundo plano para validar o
+token.
+
+Isso é grave em produção: qualquer instabilidade do Slack — token trocado,
+limite de taxa, falha de rede — derrubaria o serviço. No plano gratuito do
+Render, cair significa voltar em ~1 min, que é justamente a janela em que o
+Slack desiste de esperar o `ack` de um clique.
+
+`installCrashGuards()` registra `unhandledRejection` e `uncaughtException` para
+**registrar e seguir**. A escolha é deliberada: a verdade do sistema está no
+Firestore, e nem o HTTP nem os listeners dependem do Slack responder. O pior
+caso vira uma mensagem que não saiu — e o catch-up do próximo boot a recupera.
+Morrer seria pior que continuar.
+
+## 20. Cold start do Render free
 
 O plano gratuito dorme após ~15 min sem tráfego e o Slack exige `ack` em 3 s.
 Três defesas, todas na seção 9 da especificação:

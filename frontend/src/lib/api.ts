@@ -72,10 +72,8 @@ interface RequestOptions {
 async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const { method = 'GET', body, auth = true, signal } = options;
 
-  if (!API_URL) {
-    throw new ApiError(0, 'no_api_url', 'VITE_API_URL não está configurada.');
-  }
-
+  // `API_URL` vazia = mesma origem (app e API no mesmo serviço): a chamada vira
+  // um caminho relativo, sem CORS e sem configuração nenhuma.
   const headers: Record<string, string> = {};
   if (body !== undefined) headers['Content-Type'] = 'application/json';
 
@@ -156,7 +154,7 @@ async function demoCall<T>(fn: () => Promise<T>): Promise<T> {
 export const api = {
   /** Acorda o backend sem bloquear a interface (mitiga o cold start). */
   ping(): void {
-    if (isDemoMode() || !API_URL) return;
+    if (isDemoMode()) return;
     void fetch(`${API_URL}/health`, { method: 'GET', cache: 'no-store' }).catch(() => {});
   },
 
