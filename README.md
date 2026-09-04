@@ -639,6 +639,10 @@ identifica as pessoas por `slackId`. Detalhes em
 - A busca de cidades depende de serviços públicos gratuitos (Photon, com
   Nominatim de reserva). Se os dois estiverem fora do ar, o app deixa digitar o
   nome da cidade sem o pino no mapa.
+- Os tiles do mapa vêm do basemap público da Esri, sem chave. Se um dia exigirem
+  cadastro (foi o que aconteceu com a CARTO, ver
+  [`DECISIONS.md`](DECISIONS.md#16-tiles-do-mapa-esri-no-lugar-da-carto-a-carto-passou-a-exigir-chave)),
+  a troca é em um arquivo só: `frontend/src/components/map/tiles.ts`.
 
 ---
 

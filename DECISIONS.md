@@ -204,7 +204,47 @@ repetia uma ação que a dock (celular) e o PillNav (desktop) já oferecem.
 O botão foi para o fim do cabeçalho: continua sendo a primeira coisa depois das
 métricas, sem tapar conteúdo nenhum.
 
-## 16. Cold start do Render free
+## 16. Tiles do mapa: Esri no lugar da CARTO (a CARTO passou a exigir chave)
+
+A especificação pedia os tiles escuros `dark_all` da CARTO. **Eles deixaram de
+ser utilizáveis sem chave.** Hoje `basemaps.cartocdn.com` responde HTTP 200 e
+devolve o tile com um carimbo diagonal por cima do mapa:
+
+```
+API KEY REQUIRED — carto.com/basemaps/apikey
+```
+
+Como chave da CARTO é serviço pago, manter isso violaria a restrição 1 (custo
+zero, sem chave paga) — e o carimbo aparecia no meio do mapa do painel.
+
+A troca foi para o **World Dark Gray Canvas da Esri**, servido em
+`services.arcgisonline.com` sem chave nem cadastro, em duas camadas: a base
+(relevo, água, vias) e a de referência (nomes de lugares). Atribuição:
+`© Esri — Esri, HERE, Garmin, © OpenStreetMap contributors`.
+
+Alternativa considerada e descartada: tiles do OpenStreetMap com filtro CSS de
+inversão para simular o escuro. Funciona, mas os rótulos invertidos ficam ruins
+de ler e a política de uso do OSM desencoraja aplicações dependerem dos tiles
+públicos deles.
+
+A configuração ficou isolada em `frontend/src/components/map/tiles.ts` — se a
+Esri um dia mudar de política, é um arquivo só para trocar.
+
+## 17. Tela de identidade: buscar em vez de listar
+
+A primeira versão mostrava a lista inteira de pessoas. Com ~110 nomes isso é
+pior do que digitar: a pessoa rola procurando a si mesma, e a lista aberta
+sugere que escolher outra pessoa é natural.
+
+Agora nada aparece até digitar (mínimo de 2 caracteres). A busca aceita nome,
+pedaço do nome ou **iniciais** — "rm", "ram" e "rafa" encontram Rafaela Alves
+Mendes —, tudo sem acento. A lógica está em `lib/peopleSearch.ts`, com testes.
+
+A administradora ganhou um caminho próprio e discreto no rodapé
+("Entrar como administradora"), que pede o PIN direto: ela não precisa se
+procurar na lista, e o botão deixa claro que aquele acesso é diferente.
+
+## 18. Cold start do Render free
 
 O plano gratuito dorme após ~15 min sem tráfego e o Slack exige `ack` em 3 s.
 Três defesas, todas na seção 9 da especificação:

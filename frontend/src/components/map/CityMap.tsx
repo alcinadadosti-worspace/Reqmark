@@ -1,8 +1,8 @@
 /**
  * Mapa escuro com o pino dourado da cidade.
  *
- * Tiles do CARTO ("dark_all"), gratuitos e sem chave, com a atribuição exigida
- * pela licença. Sem Google Maps — a API deles cobra chave (seção 14).
+ * Tiles gratuitos e sem chave — ver `tiles.ts` para o porquê da escolha. Sem
+ * Google Maps: a API deles exige chave paga (seção 14).
  *
  * Este módulo importa o Leaflet e o CSS dele, então é sempre carregado com
  * `React.lazy`: quem não abre o passo da cidade não baixa o mapa.
@@ -12,11 +12,13 @@ import { MapContainer, Marker, TileLayer, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import type { CityRef } from '@/shared/types';
-
-const CARTO_TILES = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
-const ATTRIBUTION =
-  '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; ' +
-  '<a href="https://carto.com/attributions">CARTO</a>';
+import {
+  TILE_ATTRIBUTION,
+  TILE_BASE_URL,
+  TILE_LABELS_URL,
+  TILE_MAX_NATIVE_ZOOM,
+  TILE_MAX_ZOOM,
+} from './tiles';
 
 /** Pino dourado pulsante (estilos em `index.css`, classe `.am-marker`). */
 const goldMarker = L.divIcon({
@@ -99,7 +101,14 @@ export default function CityMap({
       // Mapas decorativos não devem entrar na ordem de tabulação.
       {...(isStatic ? { tap: false } : {})}
     >
-      <TileLayer url={CARTO_TILES} attribution={ATTRIBUTION} subdomains="abcd" maxZoom={19} />
+      <TileLayer
+        url={TILE_BASE_URL}
+        attribution={TILE_ATTRIBUTION}
+        maxZoom={TILE_MAX_ZOOM}
+        maxNativeZoom={TILE_MAX_NATIVE_ZOOM}
+      />
+      {/* Nomes de lugares por cima da base. */}
+      <TileLayer url={TILE_LABELS_URL} maxZoom={TILE_MAX_ZOOM} maxNativeZoom={TILE_MAX_NATIVE_ZOOM} />
       <Marker position={center} icon={goldMarker} alt={`Localização de ${city.name}`} />
       <FlyTo lat={city.lat} lng={city.lng} zoom={zoom} animate={animate} />
       <InvalidateOnResize />

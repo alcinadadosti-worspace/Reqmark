@@ -1,29 +1,36 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { motion } from 'motion/react';
-import { Search, X } from 'lucide-react';
+import { AnimatePresence, motion } from 'motion/react';
+import { KeyRound, Search, SearchX, X } from 'lucide-react';
 import AnimatedList from '@/components/reactbits/AnimatedList/AnimatedList';
 import SplitText from '@/components/reactbits/SplitText/SplitText';
 import ShinyText from '@/components/reactbits/ShinyText/ShinyText';
 import { Avatar } from '@/components/ui/Avatar';
 import { LogoMark } from '@/components/ui/Logo';
 import { Input } from '@/components/ui/Field';
-import { EmptyState, ErrorNotice, LoadingScreen } from '@/components/ui/Feedback';
+import { ErrorNotice, LoadingScreen } from '@/components/ui/Feedback';
 import { useAppData } from '@/data/AppDataProvider';
 import { useIdentityStore } from '@/store/identity';
 import { usePrefersReducedMotion } from '@/hooks/useMediaQuery';
-import { normalize } from '@/lib/geocode';
+import { searchPeople } from '@/lib/peopleSearch';
 import { EASE_BRAND } from '@/lib/motion';
 import type { AppUser } from '@/shared/types';
 import { AuroraBackdrop } from './AuroraBackdrop';
 import { AdminPinDialog } from './AdminPinDialog';
 
+/** A partir de quantos caracteres a busca começa a mostrar resultados. */
+const MIN_QUERY = 2;
+
 /**
  * Tela de identidade (`/`) — seção 8.1.
  *
- * Sem cadastro nem senha: a pessoa se encontra na lista e entra. A escolha vai
- * para o `localStorage`. Se for a administradora, o PIN é pedido em seguida —
- * mas ela pode dispensar e usar o app como solicitante.
+ * Sem cadastro nem senha: a pessoa se encontra e entra. A lista NÃO é exibida
+ * inteira — são ~110 nomes, e rolar até o seu é pior do que digitar duas
+ * letras. Quem digita manda no que aparece; a busca aceita nome, pedaço do
+ * nome ou iniciais.
+ *
+ * A administradora tem um caminho próprio e discreto no rodapé, que pede o PIN
+ * direto — ela não precisa se procurar na lista.
  */
 export default function IdentityPage() {
   const navigate = useNavigate();
@@ -36,49 +43,46 @@ export default function IdentityPage() {
   const unlockAdmin = useIdentityStore((state) => state.unlockAdmin);
 
   const [term, setTerm] = useState('');
-  const [pendingAdmin, setPendingAdmin] = useState<AppUser | null>(null);
+  /** `person` = escolheu a administradora na busca; `button` = veio do rodapé. */
+  const [pinFor, setPinFor] = useState<'person' | 'button' | null>(null);
 
   const redirectTo = (location.state as { from?: string } | null)?.from ?? '/itens';
 
-  // Já identificado? Vai direto para o app.
   useEffect(() => {
     if (identity) navigate(redirectTo, { replace: true });
   }, [identity, navigate, redirectTo]);
 
-  /** Busca tolerante a acentos: "jose" encontra "José". */
-  const results = useMemo(() => {
-    const needle = normalize(term);
-    if (!needle) return users;
+  const admin = useMemo(() => users.find((user) => user.role === 'admin') ?? null, [users]);
 
-    return users
-      .map((user) => {
-        const haystack = normalize(user.name);
-        const index = haystack.indexOf(needle);
-        if (index < 0) return null;
-        // Quem começa com o termo (ou começa uma palavra com ele) vem antes.
-        const startsWord = index === 0 || haystack[index - 1] === ' ';
-        return { user, rank: startsWord ? index : index + 100 };
-      })
-      .filter((entry): entry is { user: AppUser; rank: number } => entry !== null)
-      .sort((a, b) => a.rank - b.rank || a.user.name.localeCompare(b.user.name, 'pt-BR'))
-      .map((entry) => entry.user);
-  }, [term, users]);
+  const results = useMemo(() => searchPeople(users, term), [term, users]);
 
-  const choose = (user: AppUser) => {
-    if (user.role === 'admin') {
-      setPendingAdmin(user);
-      return;
-    }
+  const query = term.trim();
+  const searching = query.length >= MIN_QUERY;
+
+  const enter = (user: AppUser) => {
     setIdentity({ slackId: user.slackId, name: user.name, role: user.role });
     navigate(redirectTo, { replace: true });
   };
 
-  /** Entra como administradora depois do PIN validado. */
-  const completeAdmin = (unlocked: boolean) => {
-    if (!pendingAdmin) return;
-    setIdentity({ slackId: pendingAdmin.slackId, name: pendingAdmin.name, role: pendingAdmin.role });
+  const choose = (user: AppUser) => {
+    if (user.role === 'admin') {
+      setPinFor('person');
+      return;
+    }
+    enter(user);
+  };
+
+  /** Encerra o fluxo do PIN, tendo ele sido validado ou dispensado. */
+  const finishAdmin = (unlocked: boolean) => {
+    const origin = pinFor;
+    setPinFor(null);
+    if (!admin) return;
+
+    // Dispensou o PIN vindo do botão: era só o caminho da admin, não entra.
+    if (!unlocked && origin === 'button') return;
+
+    setIdentity({ slackId: admin.slackId, name: admin.name, role: admin.role });
     if (unlocked) unlockAdmin();
-    setPendingAdmin(null);
     navigate(unlocked ? '/admin' : redirectTo, { replace: true });
   };
 
@@ -104,7 +108,9 @@ export default function IdentityPage() {
     <div className="relative flex min-h-dvh flex-col overflow-hidden">
       <AuroraBackdrop />
 
-      <div className="relative z-10 mx-auto flex w-full max-w-xl flex-1 flex-col px-5 pb-8 pt-12 sm:pt-20">
+      {/* `justify-center`: sem a lista aberta a tela tem pouco conteúdo, e
+          empurrar o rodapé para baixo deixaria um vazio no meio. */}
+      <div className="relative z-10 mx-auto flex w-full max-w-xl flex-1 flex-col justify-center px-5 pb-8 pt-12">
         <motion.div
           className="flex flex-col items-center text-center"
           initial={reduced ? false : { opacity: 0, y: 14 }}
@@ -133,10 +139,10 @@ export default function IdentityPage() {
 
           <div className="mt-3 max-w-sm text-sm text-muted">
             {reduced ? (
-              <span>Escolha seu nome para ver os itens e abrir requisições.</span>
+              <span>Digite seu nome ou suas iniciais para entrar.</span>
             ) : (
               <ShinyText
-                text="Escolha seu nome para ver os itens e abrir requisições."
+                text="Digite seu nome ou suas iniciais para entrar."
                 speed={7}
                 color="#A8A39A"
                 shineColor="#F3D28C"
@@ -146,7 +152,7 @@ export default function IdentityPage() {
         </motion.div>
 
         <motion.div
-          className="mt-8 flex min-h-0 flex-1 flex-col"
+          className="mt-8 flex min-h-0 flex-col"
           initial={reduced ? false : { opacity: 0, y: 18 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.12, ease: EASE_BRAND }}
@@ -160,9 +166,10 @@ export default function IdentityPage() {
               <Input
                 value={term}
                 onChange={(event) => setTerm(event.target.value)}
-                placeholder="Buscar pelo nome…"
-                aria-label="Buscar pessoa pelo nome"
+                placeholder="Seu nome ou iniciais…"
+                aria-label="Buscar seu nome"
                 autoComplete="off"
+                autoFocus
                 enterKeyHint="search"
                 leading={<Search className="h-4 w-4" aria-hidden />}
                 trailing={
@@ -179,38 +186,101 @@ export default function IdentityPage() {
                 }
               />
 
-              <p className="mt-2 px-1 text-2xs text-muted" aria-live="polite">
-                {results.length === users.length
-                  ? `${users.length} pessoas`
-                  : `${results.length} de ${users.length} pessoas`}
+              <p className="sr-only" aria-live="polite">
+                {searching ? `${results.length} pessoa(s) encontrada(s)` : ''}
               </p>
 
-              {results.length === 0 ? (
-                <EmptyState
-                  className="mt-4"
-                  icon={<Search className="h-7 w-7" strokeWidth={1.2} aria-hidden />}
-                  title="Ninguém com esse nome"
-                  description="Confira a grafia ou procure pelo sobrenome. Se você entrou na empresa há pouco tempo, peça à Suzana para te cadastrar."
-                />
-              ) : (
-                <AnimatedList
-                  className="glass mt-4 min-h-0 flex-1 overflow-hidden"
-                  listClassName="max-h-[46vh] p-2 sm:max-h-[42vh]"
-                  itemClassName="rounded-2xl border border-transparent transition-colors"
-                  selectedItemClassName="!border-gold-500/35 bg-gold-500/8"
-                  items={listItems}
-                  onItemSelect={(index) => {
-                    const user = results[index];
-                    if (user) choose(user);
-                  }}
-                  gradientColor="#121216"
-                  displayScrollbar={false}
-                  aria-label="Pessoas da equipe"
-                />
-              )}
+              <AnimatePresence mode="wait" initial={false}>
+                {!searching ? (
+                  <motion.p
+                    key="dica"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.18 }}
+                    className="mt-6 text-center text-sm leading-relaxed text-muted/80"
+                  >
+                    Comece a digitar — por exemplo{' '}
+                    <button
+                      type="button"
+                      onClick={() => setTerm('rafa')}
+                      className="text-gold-300 underline decoration-dotted underline-offset-4 hover:text-gold-200"
+                    >
+                      rafa
+                    </button>{' '}
+                    ou as iniciais{' '}
+                    <button
+                      type="button"
+                      onClick={() => setTerm('rm')}
+                      className="text-gold-300 underline decoration-dotted underline-offset-4 hover:text-gold-200"
+                    >
+                      RM
+                    </button>
+                    .
+                    <span className="mt-2 block text-2xs text-muted/60">
+                      {users.length} pessoas cadastradas
+                    </span>
+                  </motion.p>
+                ) : results.length === 0 ? (
+                  <motion.div
+                    key="vazio"
+                    initial={{ opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.18 }}
+                    className="mt-6 flex flex-col items-center gap-2 text-center"
+                  >
+                    <SearchX className="h-7 w-7 text-gold-500/50" strokeWidth={1.2} aria-hidden />
+                    <p className="text-sm text-ivory">Ninguém com esse nome</p>
+                    <p className="max-w-xs text-xs leading-relaxed text-muted">
+                      Confira a grafia ou tente o sobrenome. Se você entrou na empresa há pouco
+                      tempo, peça à Suzana para te cadastrar.
+                    </p>
+                  </motion.div>
+                ) : (
+                  <motion.div
+                    key="resultados"
+                    initial={{ opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.18 }}
+                    className="mt-4 min-h-0 flex-1"
+                  >
+                    <AnimatedList
+                      className="glass overflow-hidden"
+                      listClassName="max-h-[42vh] p-2"
+                      itemClassName="rounded-2xl border border-transparent transition-colors"
+                      selectedItemClassName="!border-gold-500/35 bg-gold-500/8"
+                      items={listItems}
+                      onItemSelect={(index) => {
+                        const user = results[index];
+                        if (user) choose(user);
+                      }}
+                      gradientColor="#121216"
+                      displayScrollbar={false}
+                      aria-label="Pessoas encontradas"
+                    />
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </>
           )}
         </motion.div>
+
+        {/* Caminho da administradora: discreto, mas sempre no mesmo lugar. */}
+        {ready && !error && admin ? (
+          <div className="mt-10 flex flex-col items-center gap-3">
+            <div className="brand-rule max-w-[10rem] opacity-50" aria-hidden />
+            <button
+              type="button"
+              onClick={() => setPinFor('button')}
+              className="inline-flex items-center gap-2 rounded-full border border-gold-500/20 px-4 py-2 text-xs text-muted transition-colors hover:border-gold-500/45 hover:text-gold-300"
+            >
+              <KeyRound className="h-3.5 w-3.5" aria-hidden />
+              Entrar como administradora
+            </button>
+          </div>
+        ) : null}
 
         <p className="mt-6 text-center text-2xs leading-relaxed text-muted/70">
           Ferramenta interna do Grupo Alcina Maria. Sua escolha fica salva neste aparelho —
@@ -219,10 +289,12 @@ export default function IdentityPage() {
       </div>
 
       <AdminPinDialog
-        open={Boolean(pendingAdmin)}
-        name={pendingAdmin?.name ?? ''}
-        onClose={() => completeAdmin(false)}
-        onSuccess={() => completeAdmin(true)}
+        open={pinFor !== null}
+        name={admin?.name ?? ''}
+        // Vindo do botão, dispensar o PIN não deve entrar como solicitante.
+        allowSkip={pinFor === 'person'}
+        onClose={() => finishAdmin(false)}
+        onSuccess={() => finishAdmin(true)}
       />
     </div>
   );

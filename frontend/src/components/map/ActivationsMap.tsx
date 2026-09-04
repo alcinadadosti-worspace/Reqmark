@@ -1,18 +1,20 @@
 /**
  * Mapa com vários pinos — as ativações aprovadas do painel admin.
  *
- * Mesmas escolhas do `CityMap`: tiles escuros do CARTO, gratuitos e sem chave.
- * Carregado com `React.lazy` pelo `LazyActivationsMap`.
+ * Mesmas escolhas do `CityMap`: tiles escuros gratuitos e sem chave (ver
+ * `tiles.ts`). Carregado com `React.lazy` pelo `LazyActivationsMap`.
  */
 import { useEffect, useMemo } from 'react';
 import { MapContainer, Marker, Popup, TileLayer, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-
-const CARTO_TILES = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
-const ATTRIBUTION =
-  '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; ' +
-  '<a href="https://carto.com/attributions">CARTO</a>';
+import {
+  TILE_ATTRIBUTION,
+  TILE_BASE_URL,
+  TILE_LABELS_URL,
+  TILE_MAX_NATIVE_ZOOM,
+  TILE_MAX_ZOOM,
+} from './tiles';
 
 /** Centro de Alagoas — usado quando não há nenhum ponto para enquadrar. */
 const ALAGOAS: [number, number] = [-9.5713, -36.782];
@@ -98,7 +100,13 @@ export default function ActivationsMap({ pins, className }: ActivationsMapProps)
 
   return (
     <MapContainer center={ALAGOAS} zoom={7} className={className} scrollWheelZoom={false}>
-      <TileLayer url={CARTO_TILES} attribution={ATTRIBUTION} subdomains="abcd" maxZoom={19} />
+      <TileLayer
+        url={TILE_BASE_URL}
+        attribution={TILE_ATTRIBUTION}
+        maxZoom={TILE_MAX_ZOOM}
+        maxNativeZoom={TILE_MAX_NATIVE_ZOOM}
+      />
+      <TileLayer url={TILE_LABELS_URL} maxZoom={TILE_MAX_ZOOM} maxNativeZoom={TILE_MAX_NATIVE_ZOOM} />
 
       {valid.map((pin) => (
         <Marker key={pin.id} position={[pin.lat, pin.lng]} icon={pinIcon(pin.active)}>

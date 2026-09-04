@@ -12,6 +12,12 @@ export interface AdminPinDialogProps {
   name: string;
   onClose: () => void;
   onSuccess: () => void;
+  /**
+   * `true` quando fechar sem o PIN ainda entra no app como solicitante — o caso
+   * de quem escolheu a administradora na busca. Vindo do botão "Entrar como
+   * administradora", fechar apenas cancela.
+   */
+  allowSkip?: boolean;
 }
 
 /**
@@ -21,7 +27,13 @@ export interface AdminPinDialogProps {
  * confere em tempo constante e devolve um token HMAC de 12 h guardado no
  * `sessionStorage`.
  */
-export function AdminPinDialog({ open, name, onClose, onSuccess }: AdminPinDialogProps) {
+export function AdminPinDialog({
+  open,
+  name,
+  onClose,
+  onSuccess,
+  allowSkip = true,
+}: AdminPinDialogProps) {
   const [pin, setPin] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -71,7 +83,7 @@ export function AdminPinDialog({ open, name, onClose, onSuccess }: AdminPinDialo
       footer={
         <>
           <Button type="button" variant="ghost" onClick={onClose} disabled={loading}>
-            Agora não
+            {allowSkip ? 'Agora não' : 'Cancelar'}
           </Button>
           <Button type="submit" form="admin-pin-form" loading={loading} disabled={pin.trim().length < 4}>
             Entrar
@@ -88,10 +100,15 @@ export function AdminPinDialog({ open, name, onClose, onSuccess }: AdminPinDialo
                 Modo demonstração: <strong className="text-gold-300">qualquer PIN</strong> de 4 ou
                 mais dígitos abre o painel. Em produção, o PIN é conferido pelo servidor.
               </>
-            ) : (
+            ) : allowSkip ? (
               <>
                 Você também pode usar o app como solicitante — é só fechar esta janela. O PIN só é
                 necessário para aprovar, reprovar e cadastrar itens.
+              </>
+            ) : (
+              <>
+                O PIN libera a fila de aprovações, o cadastro de itens e as configurações. Ele é
+                conferido pelo servidor, nunca aqui no navegador.
               </>
             )}
           </p>
