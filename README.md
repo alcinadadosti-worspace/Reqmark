@@ -169,6 +169,29 @@ npm --prefix frontend run dev     # http://localhost:5173
 npm --prefix backend run dev      # http://localhost:8080
 ```
 
+### Modo demonstração (sem Firebase, sem backend)
+
+Para só **ver o app funcionando** — revisar o design, mostrar o fluxo para a
+Suzana antes do deploy — não precisa configurar nada:
+
+```bash
+npm --prefix frontend run dev
+```
+
+Sem as variáveis `VITE_FIREBASE_*`, o app entra sozinho em modo demonstração:
+dados em memória, com pessoas, os cinco itens e seis requisições montadas para
+exercitar o motor de disponibilidade (item esgotado, pré-reserva concorrente,
+conflito com aprovada, devolução antecipada). Um selo **DEMO** aparece no
+cabeçalho e qualquer PIN de 4+ dígitos abre o painel da administradora.
+
+Tudo funciona de verdade — criar requisição, aprovar, reprovar, conversar,
+marcar devolução —, porque as decisões passam pelo **mesmo** motor de
+disponibilidade da produção. O que muda é só de onde vêm os dados. As alterações
+somem ao recarregar a página.
+
+Para forçar o modo demonstração mesmo com o Firebase configurado (útil para
+publicar uma prévia), use `VITE_DEMO_MODE=true`.
+
 > Os botões do Slack **não funcionam em `localhost`**: o Slack precisa alcançar
 > a sua máquina por HTTPS público. Para testar as interações localmente, exponha
 > a porta 8080 com um túnel (`ngrok http 8080`, por exemplo) e aponte a

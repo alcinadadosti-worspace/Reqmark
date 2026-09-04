@@ -9,6 +9,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { onSnapshot } from 'firebase/firestore';
 import { docToEvent, docToRequest, mapSnapshot, queries, refs } from '@/lib/collections';
 import { ensureAnonymousAuth } from '@/lib/firebase';
+import { demoStore, isDemoMode } from '@/demo';
 import type { MarketingRequest, RequestEvent } from '@/shared/types';
 
 interface ListState<T> {
@@ -27,6 +28,13 @@ export function useMyRequests(requesterId: string | null | undefined): ListState
     if (!requesterId) {
       setState({ data: [], loading: false, error: null });
       return;
+    }
+
+    if (isDemoMode()) {
+      const sync = () =>
+        setState({ data: demoStore.requestsOf(requesterId), loading: false, error: null });
+      sync();
+      return demoStore.subscribe(sync);
     }
 
     let disposed = false;
@@ -65,6 +73,12 @@ export function useAllRequests(enabled: boolean): ListState<MarketingRequest> {
     if (!enabled) {
       setState({ data: [], loading: false, error: null });
       return;
+    }
+
+    if (isDemoMode()) {
+      const sync = () => setState({ data: [...demoStore.requests], loading: false, error: null });
+      sync();
+      return demoStore.subscribe(sync);
     }
 
     let disposed = false;
@@ -116,6 +130,18 @@ export function useRequestTicket(requestId: string | undefined): TicketState {
       setLoading(false);
       setNotFound(true);
       return;
+    }
+
+    if (isDemoMode()) {
+      const sync = () => {
+        const found = demoStore.find(requestId);
+        setRequest(found ? { ...found } : null);
+        setEvents([...demoStore.eventsOf(requestId)]);
+        setNotFound(!found);
+        setLoading(false);
+      };
+      sync();
+      return demoStore.subscribe(sync);
     }
 
     let disposed = false;

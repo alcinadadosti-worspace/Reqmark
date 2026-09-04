@@ -6,6 +6,7 @@
  * `POST /admin/login` (PIN) e vive no `sessionStorage`.
  */
 import { API_URL } from './env';
+import { demoStore, isDemoMode } from '@/demo';
 import type { AdminLoginResponse, DecisionPayload, ItemInput } from '@/shared/types';
 
 const TOKEN_KEY = 'am:admin-token';
@@ -134,14 +135,44 @@ function safeParse(text: string): unknown {
 
 // --- Endpoints ------------------------------------------------------------
 
+/** A administradora, para assinar as ações no modo demonstração. */
+function demoActor(): { slackId: string; name: string } {
+  const admin = demoStore.users.find((user) => user.role === 'admin');
+  return {
+    slackId: admin?.slackId ?? 'U09F9LWM6MC',
+    name: admin?.name ?? 'Suzana Martins Tavares',
+  };
+}
+
+/** Converte os erros da loja de demonstração no mesmo formato do backend. */
+async function demoCall<T>(fn: () => Promise<T>): Promise<T> {
+  try {
+    return await fn();
+  } catch (cause) {
+    throw new ApiError(400, 'demo_error', (cause as Error).message);
+  }
+}
+
 export const api = {
   /** Acorda o backend sem bloquear a interface (mitiga o cold start). */
   ping(): void {
-    if (!API_URL) return;
+    if (isDemoMode() || !API_URL) return;
     void fetch(`${API_URL}/health`, { method: 'GET', cache: 'no-store' }).catch(() => {});
   },
 
-  login(pin: string): Promise<AdminLoginResponse> {
+  async login(pin: string): Promise<AdminLoginResponse> {
+    if (isDemoMode()) {
+      // Sem backend não há o que conferir: qualquer PIN de 4+ dígitos entra.
+      if (pin.trim().length < 4) throw new ApiError(401, 'invalid_pin', 'PIN incorreto.');
+      const actor = demoActor();
+      return {
+        token: 'demo-token',
+        expiresAt: Date.now() + 12 * 60 * 60 * 1000,
+        name: actor.name,
+        slackId: actor.slackId,
+      };
+    }
+
     return request<AdminLoginResponse>('/admin/login', {
       method: 'POST',
       body: { pin },
@@ -150,39 +181,79 @@ export const api = {
   },
 
   /** Confere se o token guardado ainda vale. */
-  session(): Promise<{ ok: true; slackId: string; name: string }> {
+  async session(): Promise<{ ok: true; slackId: string; name: string }> {
+    if (isDemoMode()) return { ok: true, ...demoActor() };
     return request('/admin/session');
   },
 
-  decide(requestId: string, payload: DecisionPayload): Promise<{ ok: true; status: string }> {
+  async decide(requestId: string, payload: DecisionPayload): Promise<{ ok: true; status: string }> {
+    if (isDemoMode()) {
+      await demoCall(() =>
+        demoStore.decide(requestId, payload.decision, payload.note, payload.force, demoActor())
+      );
+      return { ok: true, status: payload.decision === 'approve' ? 'approved' : 'rejected' };
+    }
+
     return request(`/admin/requests/${requestId}/decision`, { method: 'POST', body: payload });
   },
 
-  markReturned(requestId: string): Promise<{ ok: true }> {
+  async markReturned(requestId: string): Promise<{ ok: true }> {
+    if (isDemoMode()) {
+      await demoCall(() => demoStore.markReturned(requestId, demoActor()));
+      return { ok: true };
+    }
+
     return request(`/admin/requests/${requestId}/return`, { method: 'POST' });
   },
 
-  sendAdminMessage(requestId: string, text: string): Promise<{ ok: true }> {
+  async sendAdminMessage(requestId: string, text: string): Promise<{ ok: true }> {
+    if (isDemoMode()) {
+      const actor = demoActor();
+      await demoCall(() =>
+        demoStore.addMessage({
+          requestId,
+          authorId: actor.slackId,
+          authorName: actor.name,
+          authorRole: 'admin',
+          text,
+        })
+      );
+      return { ok: true };
+    }
+
     return request(`/admin/requests/${requestId}/messages`, { method: 'POST', body: { text } });
   },
 
-  createItem(input: ItemInput): Promise<{ ok: true; id: string }> {
+  async createItem(input: ItemInput): Promise<{ ok: true; id: string }> {
+    if (isDemoMode()) return { ok: true, id: await demoCall(() => demoStore.createItem(input)) };
     return request('/admin/items', { method: 'POST', body: input });
   },
 
-  updateItem(itemId: string, input: ItemInput): Promise<{ ok: true }> {
+  async updateItem(itemId: string, input: ItemInput): Promise<{ ok: true }> {
+    if (isDemoMode()) {
+      await demoCall(() => demoStore.updateItem(itemId, input));
+      return { ok: true };
+    }
     return request(`/admin/items/${itemId}`, { method: 'PATCH', body: input });
   },
 
-  deleteItem(itemId: string): Promise<{ ok: true }> {
+  async deleteItem(itemId: string): Promise<{ ok: true }> {
+    if (isDemoMode()) {
+      await demoCall(() => demoStore.deleteItem(itemId));
+      return { ok: true };
+    }
     return request(`/admin/items/${itemId}`, { method: 'DELETE' });
   },
 
-  updateSettings(input: {
+  async updateSettings(input: {
     cities?: { name: string; state: string; lat: number; lng: number }[];
     purposeTypes?: string[];
     appUrl?: string;
   }): Promise<{ ok: true }> {
+    if (isDemoMode()) {
+      await demoCall(() => demoStore.updateSettings(input));
+      return { ok: true };
+    }
     return request('/admin/settings', { method: 'PATCH', body: input });
   },
 };

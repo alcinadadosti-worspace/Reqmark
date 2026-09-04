@@ -4,9 +4,10 @@
  * O sino do cabecalho, a pagina "Minhas requisicoes" e a home leem a mesma
  * lista. Sem isso seriam tres `onSnapshot` sobre a mesma consulta.
  */
-import { createContext, useContext, useMemo, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useMemo, type ReactNode } from 'react';
 import { useMyRequests } from '@/hooks/useRequests';
 import { useIdentityStore } from '@/store/identity';
+import { demoStore, isDemoMode } from '@/demo';
 import type { MarketingRequest } from '@/shared/types';
 
 interface MyRequestsData {
@@ -23,6 +24,12 @@ const MyRequestsContext = createContext<MyRequestsData | null>(null);
 export function MyRequestsProvider({ children }: { children: ReactNode }) {
   const identity = useIdentityStore((state) => state.identity);
   const { data, loading, error } = useMyRequests(identity?.slackId);
+
+  // Na demonstração, duas requisições de exemplo passam para quem entrou, para
+  // "Minhas requisições" e o sino terem conteúdo seja quem for a pessoa.
+  useEffect(() => {
+    if (isDemoMode() && identity) demoStore.adoptIdentity(identity.slackId, identity.name);
+  }, [identity]);
 
   const value = useMemo<MyRequestsData>(() => {
     const open = data.filter(

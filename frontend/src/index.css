@@ -154,10 +154,13 @@
     @apply h-px w-full;
   }
 
-  /* Numeros que nao "dancam" ao animar (metricas, contadores, datas). */
+  /* Numeros que nao "dancam" ao animar (metricas, contadores, datas).
+     `lining-nums` e essencial: a Cormorant Garamond usa algarismos antigos
+     (oldstyle) por padrao, em que 3, 4, 7 e 9 descem abaixo da linha de base —
+     "32" aparecia com os digitos em alturas diferentes, parecendo defeito. */
   .tabular {
-    font-variant-numeric: tabular-nums;
-    font-feature-settings: 'tnum' 1;
+    font-variant-numeric: lining-nums tabular-nums;
+    font-feature-settings: 'lnum' 1, 'tnum' 1;
   }
 
   /* Skeleton com brilho dourado atravessando. */

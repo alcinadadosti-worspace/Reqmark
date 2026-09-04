@@ -3,13 +3,14 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'motion/react';
 import { Bell, LogOut, MousePointer2, ShieldCheck, UserRoundCog } from 'lucide-react';
 import { Avatar } from '@/components/ui/Avatar';
-import { Logo, LogoMark } from '@/components/ui/Logo';
+import { Logo } from '@/components/ui/Logo';
 import { cn } from '@/lib/cn';
 import { EASE_BRAND } from '@/lib/motion';
 import { useIdentityStore } from '@/store/identity';
 import { useMyRequestsData } from '@/data/MyRequestsProvider';
 import { useCursorPreference } from '@/hooks/useCursorPreference';
 import { useIsTouch } from '@/hooks/useMediaQuery';
+import { isDemoMode } from '@/demo';
 import { CursorLayer } from './CursorLayer';
 import { DesktopNav } from './DesktopNav';
 import { DockNav } from './DockNav';
@@ -223,9 +224,17 @@ export function AppShell({ children }: { children: ReactNode }) {
             <Logo size={30} />
           </Link>
 
-          <Link to="/itens" className="hidden shrink-0 lg:block" aria-label="AM Marketing — início">
-            <LogoMark size={34} priority />
-          </Link>
+          {/* No desktop o próprio PillNav já mostra a logo — não repetir aqui. */}
+
+          {/* Deixa claro que os dados são de mentira — nunca confundir com produção. */}
+          {isDemoMode() ? (
+            <span
+              className="shrink-0 rounded-full border border-gold-500/40 bg-gold-500/10 px-2.5 py-1 text-2xs font-semibold uppercase tracking-[0.14em] text-gold-300"
+              title="Dados em memória, sem Firebase e sem backend. As alterações somem ao recarregar."
+            >
+              Demo
+            </span>
+          ) : null}
 
           <DesktopNav isAdmin={Boolean(isAdmin)} />
 

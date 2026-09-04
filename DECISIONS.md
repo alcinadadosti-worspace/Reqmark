@@ -175,7 +175,36 @@ Em troca, o README traz a lista exata de campos para preencher em cada tela
 (root directory, comandos de build e start, health check path, rewrite de SPA e
 todas as variáveis de ambiente). O resultado é o mesmo; muda quem digita.
 
-## 14. Cold start do Render free
+## 14. Modo demonstração em vez do emulador do Firestore
+
+O caminho normal para rodar local sem tocar em produção seria o emulador do
+Firestore — mas ele é uma aplicação **Java**, e a máquina de desenvolvimento não
+tem JVM. Instalar um runtime inteiro só para ver o app rodar seria um preço
+alto.
+
+Em vez disso, `frontend/src/demo/` traz uma loja em memória que substitui o
+Firestore **e** o backend. Ela liga sozinha quando o Firebase não está
+configurado em desenvolvimento, ou explicitamente com `VITE_DEMO_MODE=true`.
+
+O ponto importante: as decisões passam pelo **mesmo** `shared/availability.ts`
+da produção. O conflito que aparece na demonstração é o conflito de verdade —
+não há uma segunda implementação para divergir. O que a loja substitui é só a
+persistência.
+
+São quatro pontos de integração, todos de poucas linhas: `AppDataProvider`,
+`hooks/useRequests`, as escritas em `lib/collections` e o cliente `lib/api`.
+Com o Firebase configurado, `isDemoMode()` é `false` e nenhum deles é tocado.
+
+## 15. CTA "Nova requisição" no cabeçalho, não flutuando
+
+A especificação pedia um CTA **fixo** no catálogo. Na prática ele cobria o texto
+dos cards durante a rolagem — em 360 px chegava a esconder uma linha inteira — e
+repetia uma ação que a dock (celular) e o PillNav (desktop) já oferecem.
+
+O botão foi para o fim do cabeçalho: continua sendo a primeira coisa depois das
+métricas, sem tapar conteúdo nenhum.
+
+## 16. Cold start do Render free
 
 O plano gratuito dorme após ~15 min sem tráfego e o Slack exige `ack` em 3 s.
 Três defesas, todas na seção 9 da especificação:

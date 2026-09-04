@@ -20,6 +20,7 @@ import {
 import { buildOccupancy, type OccupancyIndex, type StockItemRef } from '@/shared/availability';
 import type { AppSettings, AppUser, Item, MarketingRequest } from '@/shared/types';
 import { isConfigured, missingEnvVars } from '@/lib/env';
+import { demoStore, isDemoMode } from '@/demo';
 
 interface AppData {
   ready: boolean;
@@ -62,6 +63,24 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    // Modo demonstração: os dados vêm da loja em memória, não do Firestore.
+    if (isDemoMode()) {
+      const sync = () => {
+        setItems([...demoStore.items]);
+        setUsers([...demoStore.users]);
+        setSettings({ ...demoStore.settings });
+        setOccupancyRequests(
+          demoStore.requests.filter(
+            (request) => request.status === 'pending' || request.status === 'approved'
+          )
+        );
+        setLoaded({ items: true, users: true, settings: true, occupancy: true });
+      };
+
+      sync();
+      return demoStore.subscribe(sync);
+    }
+
     if (!isConfigured) {
       setError(
         `Configuração do Firebase incompleta. Faltam: ${missingEnvVars.join(', ')}. ` +

@@ -25,6 +25,7 @@ import {
   type QuerySnapshot,
 } from 'firebase/firestore';
 import { getDb } from './firebase';
+import { demoStore, isDemoMode } from '@/demo';
 import { addDays, today } from '@/shared/dates';
 import type {
   AppSettings,
@@ -215,6 +216,8 @@ export interface CreateRequestResult {
  * `settings/counters.requests`.
  */
 export async function createRequest(input: CreateRequestInput): Promise<CreateRequestResult> {
+  if (isDemoMode()) return demoStore.createRequest(input);
+
   const db = getDb();
   const requestRef = doc(refs.requests());
   const eventRef = doc(refs.events(requestRef.id));
@@ -271,6 +274,8 @@ export async function sendMessage(input: {
   authorRole: UserRole;
   text: string;
 }): Promise<void> {
+  if (isDemoMode()) return demoStore.addMessage(input);
+
   await addDoc(refs.events(input.requestId), {
     type: 'message',
     authorId: input.authorId,
@@ -291,6 +296,10 @@ export async function cancelRequest(input: {
   requesterId: string;
   requesterName: string;
 }): Promise<void> {
+  if (isDemoMode()) {
+    return demoStore.cancelRequest(input.requestId, input.requesterId, input.requesterName);
+  }
+
   await updateDoc(refs.request(input.requestId), {
     status: 'cancelled',
     cancelledAt: serverTimestamp(),
@@ -309,6 +318,11 @@ export async function cancelRequest(input: {
 
 /** Zera o contador de nao lidas do proprio lado ao abrir o ticket. */
 export async function markTicketRead(requestId: string, side: 'admin' | 'requester'): Promise<void> {
+  if (isDemoMode()) {
+    demoStore.markRead(requestId, side);
+    return;
+  }
+
   await updateDoc(refs.request(requestId), {
     [`unread.${side}`]: 0,
   });

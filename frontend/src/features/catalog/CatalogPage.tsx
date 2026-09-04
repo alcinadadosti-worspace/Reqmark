@@ -151,6 +151,15 @@ export default function CatalogPage() {
           <Metric value={metrics.openRequests} label="requisições suas em aberto" />
           <Metric value={metrics.thisWeek} label="ações nesta semana" />
         </div>
+
+        <ButtonLink
+          to="/nova"
+          size="lg"
+          className="mt-6 w-full sm:w-auto"
+          icon={<Plus className="h-5 w-5" aria-hidden />}
+        >
+          Nova requisição
+        </ButtonLink>
       </section>
 
       {/* Filtros */}
@@ -250,20 +259,11 @@ export default function CatalogPage() {
         </motion.div>
       )}
 
-      {/* CTA fixo acima da dock */}
-      <div className="pointer-events-none fixed inset-x-0 bottom-[calc(5.5rem+env(safe-area-inset-bottom,0px))] z-20 flex justify-center px-4 lg:bottom-8">
-        <ButtonLink
-          to="/nova"
-          size="lg"
-          className="pointer-events-auto shadow-gold-glow"
-          icon={<Plus className="h-5 w-5" aria-hidden />}
-        >
-          Nova requisição
-        </ButtonLink>
-      </div>
-
-      {/* Espaço para o CTA não cobrir o último card */}
-      <div className="h-14" aria-hidden />
+      {/*
+        O CTA "Nova requisição" vive no cabeçalho, não flutuando sobre a lista.
+        Como botão fixo ele cobria o texto dos cards durante a rolagem e repetia
+        uma ação que a dock (celular) e o PillNav (desktop) já oferecem.
+      */}
 
       <ItemDrawer
         item={selected}

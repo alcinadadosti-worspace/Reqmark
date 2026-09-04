@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/Button';
 import { Field, Input } from '@/components/ui/Field';
 import { ErrorNotice } from '@/components/ui/Feedback';
 import { ApiError, api, storeAdminToken } from '@/lib/api';
+import { isDemoMode } from '@/demo';
 
 export interface AdminPinDialogProps {
   open: boolean;
@@ -82,8 +83,17 @@ export function AdminPinDialog({ open, name, onClose, onSuccess }: AdminPinDialo
         <div className="flex items-start gap-3 rounded-2xl border border-gold-500/20 bg-gold-500/5 p-3.5">
           <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-gold-400" aria-hidden />
           <p className="text-sm leading-relaxed text-muted">
-            Você também pode usar o app como solicitante — é só fechar esta janela. O PIN só é
-            necessário para aprovar, reprovar e cadastrar itens.
+            {isDemoMode() ? (
+              <>
+                Modo demonstração: <strong className="text-gold-300">qualquer PIN</strong> de 4 ou
+                mais dígitos abre o painel. Em produção, o PIN é conferido pelo servidor.
+              </>
+            ) : (
+              <>
+                Você também pode usar o app como solicitante — é só fechar esta janela. O PIN só é
+                necessário para aprovar, reprovar e cadastrar itens.
+              </>
+            )}
           </p>
         </div>
 
