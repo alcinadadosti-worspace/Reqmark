@@ -23,7 +23,7 @@ let auth: Auth | null = null;
 function ensureApp(): FirebaseApp {
   if (!isConfigured) {
     throw new Error(
-      'Firebase nao configurado: preencha as variaveis VITE_FIREBASE_* (veja frontend/.env.example).'
+      'Firebase nao configurado: preencha as variaveis VITE_FIREBASE_* (veja .env.example na raiz).'
     );
   }
   if (!app) app = initializeApp(firebaseConfig);

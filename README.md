@@ -152,13 +152,15 @@ npm --prefix backend install
 
 ### Variáveis de ambiente
 
+São todas num arquivo só, na raiz:
+
 ```bash
-cp frontend/.env.example frontend/.env.local
-cp backend/.env.example backend/.env
+cp .env.example .env
 ```
 
-Preencha os dois arquivos. O `.env.example` de cada pacote explica onde
-encontrar cada valor.
+Preencha e pronto — o mesmo arquivo serve o backend (`npm run dev:back`,
+`npm run seed`) e o build do frontend. O [`.env.example`](.env.example) explica
+onde encontrar cada valor.
 
 ### Subindo
 
@@ -314,24 +316,17 @@ O `render-build` instala e compila os dois pacotes; o `npm start` sobe o
 backend, que serve `frontend/dist` e responde `/slack/events`, `/admin/*` e
 `/health` na mesma porta.
 
-Em **Environment → Environment Variables**:
+**As variáveis, de uma vez só.** Preencha o [`.env.example`](.env.example) na
+sua máquina e, em **Environment → Environment Variables**, clique em
+**“Add from .env”** e cole o conteúdo inteiro. O Render cria todas as chaves
+de uma vez — não precisa digitar uma a uma.
+
+Acrescente também estas duas, que são só do Render:
 
 | Chave | Valor |
 | --- | --- |
 | `NODE_VERSION` | `22` |
 | `NODE_ENV` | `production` |
-| `SLACK_BOT_TOKEN` | o `xoxb-…` do passo 5.2 |
-| `SLACK_SIGNING_SECRET` | o signing secret do passo 5.2 |
-| `FIREBASE_SERVICE_ACCOUNT_B64` | o base64 do passo 5.1.6 |
-| `ADMIN_SLACK_ID` | `U09F9LWM6MC` |
-| `ADMIN_PIN` | o PIN da Suzana (6+ dígitos) |
-| `ADMIN_TOKEN_SECRET` | veja abaixo |
-| `VITE_FIREBASE_API_KEY` | do passo 5.1.5 |
-| `VITE_FIREBASE_AUTH_DOMAIN` | do passo 5.1.5 |
-| `VITE_FIREBASE_PROJECT_ID` | do passo 5.1.5 |
-| `VITE_FIREBASE_STORAGE_BUCKET` | do passo 5.1.5 |
-| `VITE_FIREBASE_MESSAGING_SENDER_ID` | do passo 5.1.5 |
-| `VITE_FIREBASE_APP_ID` | do passo 5.1.5 |
 
 Para gerar o `ADMIN_TOKEN_SECRET`:
 
@@ -342,6 +337,18 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 > **As variáveis `VITE_*` são lidas durante o BUILD**, não na execução — é o
 > Vite que as embute no bundle. Se mudar uma delas depois, precisa refazer o
 > deploy (*Manual Deploy → Clear build cache & deploy*); salvar não basta.
+
+<details>
+<summary>Alternativa: enviar o `.env` como Secret File</summary>
+
+Se preferir manter tudo num arquivo em vez de variáveis avulsas, vá em
+**Environment → Secret Files**, crie um arquivo com o nome `.env` (caminho
+relativo à raiz) e cole o conteúdo. O backend e o build do frontend leem esse
+arquivo — é o mesmo caminho usado no desenvolvimento local.
+
+Variáveis definidas no painel têm precedência sobre o arquivo, então dá para
+misturar os dois se quiser sobrescrever uma chave pontualmente.
+</details>
 
 Não é preciso configurar `APP_URL` nem `VITE_API_URL`:
 - `VITE_API_URL` vazia significa "mesma origem", que é justamente o caso;
@@ -382,8 +389,7 @@ quebra o CORS do painel.
 Roda **da sua máquina**, uma vez, apontando para o Firestore de produção:
 
 ```bash
-cd backend
-cp .env.example .env          # preencha com os MESMOS valores do Render
+cp .env.example .env          # na raiz, com os MESMOS valores do Render
 npm run seed
 ```
 

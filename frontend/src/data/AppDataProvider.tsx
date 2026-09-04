@@ -84,7 +84,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     if (!isConfigured) {
       setError(
         `Configuração do Firebase incompleta. Faltam: ${missingEnvVars.join(', ')}. ` +
-          'Veja frontend/.env.example.'
+          'Veja .env.example na raiz do repositório.'
       );
       return;
     }

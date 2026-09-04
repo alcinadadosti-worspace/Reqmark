@@ -5,13 +5,30 @@
  * sem o essencial: falhar no boot com uma mensagem clara e muito melhor do que
  * descobrir a falta de um token na primeira requisicao do Slack.
  */
-import 'dotenv/config';
+import { resolve } from 'node:path';
+import { config } from 'dotenv';
+
+/**
+ * Carrega o `.env` da RAIZ do repositorio e, se existir, o do proprio pacote.
+ *
+ * A raiz vem primeiro porque e onde mora o arquivo unico que serve os dois
+ * lados (o build do frontend le o mesmo, via `envDir` no vite.config). O
+ * `backend/.env` continua funcionando para quem prefere separar.
+ *
+ * Precisa ser caminho absoluto: `npm run seed` roda com o cwd em `backend/`,
+ * enquanto `npm start` no Render roda a partir da raiz.
+ */
+config({
+  path: [resolve(__dirname, '..', '..', '.env'), resolve(__dirname, '..', '.env')],
+  // Variaveis ja definidas no ambiente (o painel do Render) sempre vencem.
+  override: false,
+});
 
 function required(name: string): string {
   const value = process.env[name]?.trim();
   if (!value) {
     throw new Error(
-      `Variavel de ambiente ausente: ${name}. Veja backend/.env.example e o README (secao Deploy).`
+      `Variavel de ambiente ausente: ${name}. Veja .env.example na raiz e o README (secao Deploy).`
     );
   }
   return value;

@@ -4,6 +4,14 @@ import { VitePWA } from 'vite-plugin-pwa';
 import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
+  /**
+   * As variáveis vêm do `.env` da RAIZ do repositório, não de `frontend/`.
+   * Assim um arquivo só configura o build do app e a execução do backend —
+   * que é como o serviço único do Render funciona. Variáveis já presentes no
+   * ambiente (o painel do Render) continuam tendo precedência.
+   */
+  envDir: fileURLToPath(new URL('..', import.meta.url)),
+
   plugins: [
     react(),
     VitePWA({
