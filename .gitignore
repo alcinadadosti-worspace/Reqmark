@@ -8,9 +8,13 @@ Thumbs.db
 .env
 .env.*
 !.env.example
-*.serviceaccount.json
-serviceAccount*.json
-firebase-adminsdk*.json
+# Curingas nas DUAS pontas: o nome que o Firebase gera hoje começa com o id do
+# projeto (am-marketing-c18c1-firebase-adminsdk-....json), então um padrão
+# ancorado no início do nome não pegaria.
+*serviceaccount*.json
+*serviceAccount*.json
+*firebase-adminsdk*.json
+firejson/
 
 # Logs
 npm-debug.log*
