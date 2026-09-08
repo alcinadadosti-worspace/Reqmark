@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { useLocation } from 'react-router-dom';
 import PillNav, { type PillNavItem } from '@/components/reactbits/PillNav/PillNav';
+import { usePrefersReducedMotion } from '@/hooks/useMediaQuery';
 import { NAV_ITEMS } from './navItems';
 
 /**
@@ -12,6 +13,7 @@ import { NAV_ITEMS } from './navItems';
  */
 export function DesktopNav({ isAdmin }: { isAdmin: boolean }) {
   const location = useLocation();
+  const reduced = usePrefersReducedMotion();
 
   const items = useMemo<PillNavItem[]>(
     () =>
@@ -40,7 +42,13 @@ export function DesktopNav({ isAdmin }: { isAdmin: boolean }) {
         pillTextColor="#F5F1EA"
         hoveredPillTextColor="#0B0B0D"
         ease="power3.out"
-        initialLoadAnimation={false}
+        /*
+          Os cinco destinos entram em cascata quando o app abre. Preferi isso ao
+          carrossel que cicla: ali só uns poucos ficam visíveis por vez e os
+          alvos de clique se movem — ruim para navegação, que precisa estar
+          sempre no mesmo lugar.
+        */
+        initialLoadAnimation={!reduced}
       />
     </div>
   );

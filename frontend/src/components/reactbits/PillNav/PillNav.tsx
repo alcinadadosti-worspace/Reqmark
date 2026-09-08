@@ -1,6 +1,10 @@
 // PillNav — React Bits (https://reactbits.dev/), variante TS-TW.
 // Baixado de https://reactbits.dev/r/PillNav-TS-TW.json por `npm run reactbits`.
 // Versionado de proposito: pode ser customizado, mas o script sobrescreve.
+//
+// CUSTOMIZADO (nao rode `npm run reactbits -- PillNav` sem --force):
+//   - `initialLoadAnimation` passou a escalonar os itens um a um. O original so
+//     abre a largura do conteiner, entao os cinco destinos surgem juntos.
 import React, { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { gsap } from 'gsap';
@@ -136,6 +140,21 @@ const PillNav: React.FC<PillNavProps> = ({
           duration: 0.6,
           ease
         });
+
+        // CUSTOMIZADO: cascata item a item. O original so abre a largura do
+        // conteiner, e os cinco destinos aparecem de uma vez.
+        const pills = navItems.querySelectorAll('li');
+        if (pills.length > 0) {
+          gsap.set(pills, { opacity: 0, y: -14 });
+          gsap.to(pills, {
+            opacity: 1,
+            y: 0,
+            duration: 0.45,
+            ease,
+            stagger: 0.075,
+            delay: 0.18
+          });
+        }
       }
     }
 

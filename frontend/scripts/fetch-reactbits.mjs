@@ -59,7 +59,7 @@ const COMPONENTS = [
  * sobrescreve-los sem `--force` para nao apagar o trabalho por engano.
  * O que mudou em cada um esta anotado no topo do proprio arquivo.
  */
-const CUSTOMIZED = new Set(['Stepper', 'AnimatedList', 'Cubes']);
+const CUSTOMIZED = new Set(['Stepper', 'AnimatedList', 'Cubes', 'PillNav']);
 
 const VARIANT = 'TS-TW';
 const REGISTRY = 'https://reactbits.dev/r';
