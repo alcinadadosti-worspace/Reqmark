@@ -176,7 +176,7 @@ export default function AgendaPage() {
           <div className="relative">
             {reduced ? null : (
               <div
-                className="pointer-events-none absolute inset-0 z-0 overflow-hidden opacity-40"
+                className="pointer-events-none absolute inset-0 z-0 overflow-hidden opacity-90"
                 aria-hidden
               >
                 <Cubes
@@ -184,10 +184,10 @@ export default function AgendaPage() {
                   stretch
                   gridSize={7}
                   rows={gridDays.length / 7}
-                  maxAngle={38}
-                  radius={2}
-                  borderStyle="1px solid rgba(206, 161, 92, 0.45)"
-                  faceColor="#0E0E12"
+                  maxAngle={55}
+                  radius={3}
+                  borderStyle="1.5px solid rgba(226, 185, 111, 0.85)"
+                  faceColor="#14121A"
                   shadow={false}
                   autoAnimate
                   rippleOnClick={false}
