@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useRef, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
-import { AnimatePresence, motion } from 'motion/react';
+import { AnimatePresence, motion, type MotionProps } from 'motion/react';
 import { X } from 'lucide-react';
 import { cn } from '@/lib/cn';
-import { EASE_BRAND } from '@/lib/motion';
+import { EASE_BRAND, springFolder } from '@/lib/motion';
 import { usePrefersReducedMotion } from '@/hooks/useMediaQuery';
 
 const FOCUSABLE =
@@ -232,6 +232,132 @@ export function Modal({
               <div className="min-h-0 flex-1 overflow-y-auto px-6 py-3">{children}</div>
 
               {footer ? <div className="flex justify-end gap-2 px-6 pb-6 pt-2">{footer}</div> : null}
+            </motion.div>
+          </div>
+        </>
+      ) : null}
+    </AnimatePresence>,
+    document.body
+  );
+}
+
+export interface ExpandingPanelProps {
+  open: boolean;
+  onClose: () => void;
+  /**
+   * O mesmo valor usado no elemento de origem. E o que faz o painel *nascer*
+   * dele: o Motion mede a caixa do card e interpola ate a do painel. Sem isso
+   * (ou com `prefers-reduced-motion`) a abertura vira um fade comum.
+   */
+  layoutId?: string;
+  title?: ReactNode;
+  description?: ReactNode;
+  children: ReactNode;
+  footer?: ReactNode;
+  className?: string;
+}
+
+/**
+ * Painel que cresce a partir do elemento que o abriu — o gesto de pasta do iOS.
+ *
+ * Por que o conteudo entra com atraso: enquanto a caixa cresce, o que estiver
+ * dentro dela seria espremido no tamanho inicial e esticado ate o final. Entao
+ * a moldura e o titulo viajam sozinhos e o miolo aparece depois, ja no lugar.
+ *
+ * Fecha no Esc, no botao e no clique fora — o toque fora e o que faz parecer
+ * pasta, e nao caixa de dialogo.
+ */
+export function ExpandingPanel({
+  open,
+  onClose,
+  layoutId,
+  title,
+  description,
+  children,
+  footer,
+  className,
+}: ExpandingPanelProps) {
+  const panelRef = useOverlayBehavior(open, onClose);
+  const reduced = usePrefersReducedMotion();
+
+  const close = useCallback(() => onClose(), [onClose]);
+
+  // Quem pede menos movimento nao recebe o morph: a caixa mudando de tamanho e
+  // exatamente o tipo de deslocamento que a preferencia quer evitar.
+  const shared = reduced ? undefined : layoutId;
+
+  const morph: MotionProps = shared
+    ? { layoutId: shared, transition: springFolder }
+    : {
+        initial: { opacity: 0, scale: reduced ? 1 : 0.97 },
+        animate: { opacity: 1, scale: 1 },
+        exit: { opacity: 0, scale: reduced ? 1 : 0.98 },
+        transition: reduced ? { duration: 0.15 } : { duration: 0.24, ease: EASE_BRAND },
+      };
+
+  const revealContent: MotionProps = reduced
+    ? {}
+    : {
+        initial: { opacity: 0 },
+        animate: { opacity: 1, transition: { delay: 0.12, duration: 0.22, ease: EASE_BRAND } },
+        exit: { opacity: 0, transition: { duration: 0.1 } },
+      };
+
+  return createPortal(
+    <AnimatePresence>
+      {open ? (
+        <>
+          <Backdrop onClose={close} />
+          {/* O container inteiro fecha ao clique; o painel barra a propagacao. */}
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6"
+            onClick={close}
+          >
+            <motion.div
+              ref={panelRef}
+              role="dialog"
+              aria-modal="true"
+              aria-label={typeof title === 'string' ? title : 'Detalhes'}
+              tabIndex={-1}
+              onClick={(event) => event.stopPropagation()}
+              className={cn(
+                'flex max-h-[86vh] w-full max-w-lg flex-col overflow-hidden rounded-3xl',
+                'border border-gold-500/20 bg-onyx-900/95 shadow-glass-lg backdrop-blur-2xl',
+                className
+              )}
+              {...morph}
+            >
+              {/* Cabecalho fora do atraso: o nome do item acompanha a caixa. */}
+              <div className="flex items-start justify-between gap-4 px-5 pb-3 pt-5">
+                <div className="min-w-0">
+                  {title ? <h2 className="font-display text-2xl text-ivory">{title}</h2> : null}
+                  {description ? <p className="mt-0.5 text-sm text-muted">{description}</p> : null}
+                </div>
+                <button
+                  type="button"
+                  onClick={close}
+                  className="shrink-0 rounded-full p-2 text-muted transition-colors hover:bg-onyx-800 hover:text-ivory"
+                  aria-label="Fechar"
+                >
+                  <X className="h-5 w-5" aria-hidden />
+                </button>
+              </div>
+
+              <motion.div
+                className="min-h-0 flex-1 overflow-y-auto px-5 pb-5"
+                {...revealContent}
+              >
+                {children}
+              </motion.div>
+
+              {footer ? (
+                <motion.div
+                  className="border-t border-gold-500/15 bg-onyx-900/80 px-5 py-4 pb-[calc(1rem+env(safe-area-inset-bottom,0px))]"
+                  {...revealContent}
+                >
+                  {footer}
+                </motion.div>
+              ) : null}
             </motion.div>
           </div>
         </>

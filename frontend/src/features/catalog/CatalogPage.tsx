@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { motion } from 'motion/react';
+import { LayoutGroup, motion } from 'motion/react';
 import { ArrowUpDown, PackageSearch, Plus, Search, X } from 'lucide-react';
 import BlurText from '@/components/reactbits/BlurText/BlurText';
 import CountUp from '@/components/reactbits/CountUp/CountUp';
@@ -120,7 +120,13 @@ export default function CatalogPage() {
   const firstName = identity?.name.split(' ')[0] ?? '';
 
   return (
-    <div className="space-y-7">
+    /*
+      O painel de detalhes vai para `document.body` via portal, então card e
+      painel ficam em ramos diferentes da árvore. O LayoutGroup é o que mantém
+      os dois no mesmo escopo de projeção e faz o `layoutId` casar.
+    */
+    <LayoutGroup>
+      <div className="space-y-7">
       {/* Cabeçalho com raios de luz e métricas */}
       <section className="relative overflow-hidden rounded-3xl border border-gold-500/15 bg-onyx-900/50 px-5 py-7 backdrop-blur-xl sm:px-7 sm:py-9">
         <HeroBackdrop />
@@ -265,12 +271,13 @@ export default function CatalogPage() {
         uma ação que a dock (celular) e o PillNav (desktop) já oferecem.
       */}
 
-      <ItemDrawer
-        item={selected}
-        occupancy={occupancy}
-        today={day}
-        onClose={() => setSelected(null)}
-      />
-    </div>
+        <ItemDrawer
+          item={selected}
+          occupancy={occupancy}
+          today={day}
+          onClose={() => setSelected(null)}
+        />
+      </div>
+    </LayoutGroup>
   );
 }

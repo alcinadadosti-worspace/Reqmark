@@ -13,6 +13,18 @@ export const EASE_BRAND = [0.22, 1, 0.36, 1] as const;
 export const springSoft: Transition = { type: 'spring', stiffness: 260, damping: 26, mass: 0.7 };
 export const springSnappy: Transition = { type: 'spring', stiffness: 420, damping: 32, mass: 0.6 };
 
+/**
+ * Mola do card que cresce ate virar painel (catalogo). Sem bounce de proposito:
+ * a caixa esta mudando de tamanho, e qualquer sobressalto faz o conteudo dentro
+ * dela tremer. Mesmos valores do exemplo de pasta do iOS da motion.dev.
+ */
+export const springFolder: Transition = {
+  type: 'spring',
+  stiffness: 200,
+  damping: 22,
+  bounce: 0,
+};
+
 export const fadeUp: Variants = {
   hidden: { opacity: 0, y: 10 },
   visible: { opacity: 1, y: 0, transition: { duration: 0.28, ease: EASE_BRAND } },
@@ -52,6 +64,17 @@ export const drawerVariants: Variants = {
   visible: { y: 0, transition: { type: 'spring', stiffness: 320, damping: 34 } },
   exit: { y: '100%', transition: { duration: 0.2, ease: EASE_BRAND } },
 };
+
+/**
+ * Liga o card do catalogo ao painel que nasce dele.
+ *
+ * Vive aqui, e nao no componente do card, porque os dois lados precisam gerar
+ * exatamente a mesma string — e um arquivo de componente nao pode exportar
+ * utilitarios sem irritar o `react-refresh/only-export-components`.
+ */
+export function itemSurfaceId(itemId: string): string {
+  return `item-surface-${itemId}`;
+}
 
 /** Variantes neutras, para quando `prefers-reduced-motion` esta ativo. */
 export const reducedVariants: Variants = {

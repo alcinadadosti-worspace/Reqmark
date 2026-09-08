@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { CalendarPlus, MapPin, Package, Warehouse } from 'lucide-react';
-import { Drawer } from '@/components/ui/Overlay';
+import { ExpandingPanel } from '@/components/ui/Overlay';
 import { Button } from '@/components/ui/Button';
 import { Avatar } from '@/components/ui/Avatar';
 import { AvailabilityRing } from '@/components/ui/AvailabilityRing';
@@ -12,6 +12,7 @@ import { EmptyState } from '@/components/ui/Feedback';
 import { describeItemStatus } from '@/lib/availability';
 import { formatDayFriendly, formatRangeBR } from '@/lib/dates';
 import { cn } from '@/lib/cn';
+import { itemSurfaceId } from '@/lib/motion';
 import { itemSchedule, type OccupancyIndex } from '@/shared/availability';
 import { addDays } from '@/shared/dates';
 import type { DayString, Item } from '@/shared/types';
@@ -30,6 +31,10 @@ const SCHEDULE_HORIZON_DAYS = 90;
 /**
  * Detalhes do item: características, onde fica guardado e — o que realmente
  * importa — a agenda: quem está com ele, em qual cidade e até quando.
+ *
+ * O painel **nasce do card** que foi tocado, como uma pasta do iOS abrindo: o
+ * `layoutId` é o mesmo dos dois lados (`itemSurfaceId`), e o Motion interpola a
+ * caixa de um até a do outro. Fechar refaz o caminho de volta.
  */
 export function ItemDrawer({ item, occupancy, today, onClose }: ItemDrawerProps) {
   const navigate = useNavigate();
@@ -57,9 +62,10 @@ export function ItemDrawer({ item, occupancy, today, onClose }: ItemDrawerProps)
   };
 
   return (
-    <Drawer
+    <ExpandingPanel
       open={Boolean(item)}
       onClose={onClose}
+      layoutId={item ? itemSurfaceId(item.id) : undefined}
       title={item?.name}
       description={item?.category}
       footer={
@@ -192,6 +198,6 @@ export function ItemDrawer({ item, occupancy, today, onClose }: ItemDrawerProps)
           </section>
         </div>
       ) : null}
-    </Drawer>
+    </ExpandingPanel>
   );
 }
