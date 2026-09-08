@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useMotionStore } from '@/store/motion';
 
 /** Assina uma media query e reage a mudancas (rotacao, redimensionamento). */
 export function useMediaQuery(queryText: string): boolean {
@@ -19,9 +20,25 @@ export function useMediaQuery(queryText: string): boolean {
   return matches;
 }
 
-/** `true` quando a pessoa pediu menos movimento no sistema. */
-export function usePrefersReducedMotion(): boolean {
+/** `true` quando o sistema operacional pede menos movimento. */
+export function useSystemReducedMotion(): boolean {
   return useMediaQuery('(prefers-reduced-motion: reduce)');
+}
+
+/**
+ * `true` quando o app deve ficar parado.
+ *
+ * Segue o sistema por padrao, mas o interruptor do menu (`store/motion`) tem a
+ * palavra final nos dois sentidos — sem ele, quem tem a preferencia ligada no
+ * aparelho sem saber ve um app inteiro sem movimento e sem explicacao.
+ */
+export function usePrefersReducedMotion(): boolean {
+  const system = useSystemReducedMotion();
+  const preference = useMotionStore((state) => state.preference);
+
+  if (preference === 'full') return false;
+  if (preference === 'reduced') return true;
+  return system;
 }
 
 export function useIsDesktop(): boolean {

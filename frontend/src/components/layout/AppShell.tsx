@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'motion/react';
-import { Bell, LogOut, MousePointer2, ShieldCheck, UserRoundCog } from 'lucide-react';
+import { Bell, LogOut, MousePointer2, ShieldCheck, Sparkles, UserRoundCog } from 'lucide-react';
 import { Avatar } from '@/components/ui/Avatar';
 import { Logo } from '@/components/ui/Logo';
 import { cn } from '@/lib/cn';
@@ -9,7 +9,8 @@ import { EASE_BRAND } from '@/lib/motion';
 import { useIdentityStore } from '@/store/identity';
 import { useMyRequestsData } from '@/data/MyRequestsProvider';
 import { useCursorPreference } from '@/hooks/useCursorPreference';
-import { useIsTouch } from '@/hooks/useMediaQuery';
+import { useIsTouch, usePrefersReducedMotion, useSystemReducedMotion } from '@/hooks/useMediaQuery';
+import { useMotionStore } from '@/store/motion';
 import { isDemoMode } from '@/demo';
 import { CursorLayer } from './CursorLayer';
 import { DesktopNav } from './DesktopNav';
@@ -24,6 +25,9 @@ interface IdentityMenuProps {
 function IdentityMenu({ cursorEnabled, onCursorChange }: IdentityMenuProps) {
   const [open, setOpen] = useState(false);
   const isTouch = useIsTouch();
+  const systemReduced = useSystemReducedMotion();
+  const stopped = usePrefersReducedMotion();
+  const setMotionPreference = useMotionStore((state) => state.setPreference);
   const identity = useIdentityStore((state) => state.identity);
   const signOut = useIdentityStore((state) => state.signOut);
   const navigate = useNavigate();
@@ -103,6 +107,44 @@ function IdentityMenu({ cursorEnabled, onCursorChange }: IdentityMenuProps) {
                 Painel da administradora
               </button>
             ) : null}
+
+            {/*
+              Animações. Existe porque o silêncio é confuso: quem tem
+              "prefers-reduced-motion" ligado no aparelho — fácil de acontecer
+              sem perceber — vê o app inteiro parado e nada explica o motivo.
+              Aqui a pessoa vê a causa e pode ignorá-la.
+            */}
+            <button
+              type="button"
+              role="menuitemcheckbox"
+              aria-checked={!stopped}
+              onClick={() => setMotionPreference(stopped ? 'full' : 'reduced')}
+              className="flex w-full items-start gap-2.5 rounded-xl px-3 py-2.5 text-left text-sm text-ivory transition-colors hover:bg-onyx-800"
+            >
+              <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-muted" aria-hidden />
+              <span className="min-w-0 flex-1">
+                Animações
+                {stopped && systemReduced ? (
+                  <span className="mt-0.5 block text-2xs leading-snug text-muted">
+                    Seu sistema pede menos movimento
+                  </span>
+                ) : null}
+              </span>
+              <span
+                className={cn(
+                  'mt-0.5 h-5 w-9 shrink-0 rounded-full border transition-colors',
+                  stopped ? 'border-onyx-600 bg-onyx-800' : 'border-gold-500/60 bg-gold-500/30'
+                )}
+                aria-hidden
+              >
+                <span
+                  className={cn(
+                    'mt-0.5 block h-3.5 w-3.5 rounded-full transition-transform duration-200 ease-brand',
+                    stopped ? 'translate-x-0.5 bg-muted' : 'translate-x-5 bg-gold-300'
+                  )}
+                />
+              </span>
+            </button>
 
             {/* Cursor customizado: só faz sentido onde existe ponteiro. */}
             {!isTouch ? (
