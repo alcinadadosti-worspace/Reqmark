@@ -1,8 +1,8 @@
 import { useMemo, useState } from 'react';
 import { LayoutGroup, motion } from 'motion/react';
 import { ArrowUpDown, PackageSearch, Plus, Search, X } from 'lucide-react';
-import BlurText from '@/components/reactbits/BlurText/BlurText';
 import CountUp from '@/components/reactbits/CountUp/CountUp';
+import GradientText from '@/components/reactbits/GradientText/GradientText';
 import { Chip, ChipRow } from '@/components/ui/Chip';
 import { Input } from '@/components/ui/Field';
 import { ButtonLink } from '@/components/ui/Button';
@@ -118,6 +118,7 @@ export default function CatalogPage() {
   }, [activeItems, category, term, sort, occupancy, day]);
 
   const firstName = identity?.name.split(' ')[0] ?? '';
+  const welcome = `${greeting()}${firstName ? ',' : ''}`;
 
   return (
     /*
@@ -131,21 +132,40 @@ export default function CatalogPage() {
       <section className="relative overflow-hidden rounded-3xl border border-gold-500/15 bg-onyx-900/50 px-5 py-7 backdrop-blur-xl sm:px-7 sm:py-9">
         <HeroBackdrop />
 
-        <p className="text-2xs uppercase tracking-[0.28em] text-gold-500/80">
-          {greeting()}
-          {firstName ? ',' : ''}
-        </p>
+        {/*
+          As boas-vindas e o nome recebem a mesma onda de gradiente, para lerem
+          como uma frase só. O `!` nas classes neutraliza o que o wrapper do
+          GradientText traz de fábrica (mx-auto, cursor-pointer, font-medium,
+          backdrop-blur) e centralizaria este cabeçalho, que é à esquerda.
 
+          Com `prefers-reduced-motion` o texto fica parado na cor de sempre: o
+          gradiente é um laço infinito, justamente o que a preferência desliga.
+        */}
         {reduced ? (
-          <h1 className="mt-1 font-display text-4xl text-ivory sm:text-5xl">{firstName || 'Olá'}</h1>
+          <>
+            <p className="text-2xs uppercase tracking-[0.28em] text-gold-500/80">{welcome}</p>
+            <h1 className="mt-1 font-display text-4xl text-ivory sm:text-5xl">
+              {firstName || 'Olá'}
+            </h1>
+          </>
         ) : (
-          <BlurText
-            text={firstName || 'Olá'}
-            animateBy="letters"
-            direction="bottom"
-            delay={28}
-            className="mt-1 font-display text-4xl text-ivory sm:text-5xl"
-          />
+          <>
+            <GradientText
+              colors={['#CEA15C', '#F3D28C', '#CEA15C']}
+              animationSpeed={7}
+              className="!mx-0 !cursor-default !rounded-none !font-normal !backdrop-blur-none text-2xs uppercase tracking-[0.28em]"
+            >
+              {welcome}
+            </GradientText>
+
+            <GradientText
+              colors={['#CEA15C', '#F5F1EA', '#F3D28C', '#CEA15C']}
+              animationSpeed={6}
+              className="!mx-0 !mt-1 !cursor-default !rounded-none !font-normal !backdrop-blur-none font-display text-4xl sm:text-5xl"
+            >
+              {firstName || 'Olá'}
+            </GradientText>
+          </>
         )}
 
         <p className="mt-2 max-w-md text-sm leading-relaxed text-muted">
