@@ -174,6 +174,11 @@ export default function AgendaPage() {
             o mouse. Por isso o `pointerTarget` manda os listeners para este
             contêiner, que é quem de fato recebe o ponteiro.
 
+            O `cellGap` de 4px é o mesmo `gap-1` da grade de dias — sem ele o
+            componente usa 5%, e cada cubo sai menor que o seu quadrado.
+            Mesmas colunas, mesmas linhas, mesmo vão e mesma caixa: um cubo
+            por dia, encaixado.
+
             As células são `bg-onyx-900/40`, então os cubos aparecem através
             delas sem apagar a cor que indica disponibilidade.
           */}
@@ -188,6 +193,7 @@ export default function AgendaPage() {
                   stretch
                   gridSize={7}
                   rows={gridDays.length / 7}
+                  cellGap={4}
                   maxAngle={55}
                   radius={3}
                   borderStyle="1.5px solid rgba(226, 185, 111, 0.85)"
