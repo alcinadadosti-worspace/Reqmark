@@ -9,11 +9,16 @@
 //   - Acrescentado o prop `stretch`. Cada cubo tem `aspect-square`, entao a
 //     grade sempre fica quadrada e transborda de um container que nao seja.
 //     Com `stretch` os cubos viram prismas e a grade acompanha a caixa.
+//   - Acrescentado o prop `pointerTarget`. Os listeners moram na propria
+//     cena; como camada de fundo ela precisa de `pointer-events-none` para nao
+//     roubar o clique do conteudo, e assim nunca recebe o mouse. Com o prop, quem
+//     escuta e o elemento de verdade. Os handlers de toque ficam de fora nesse
+//     caso: eles chamam preventDefault e travariam a rolagem no celular.
 //   - Acrescentado o prop `rows`. O original usa `gridSize` para linhas e
 //     colunas; um calendario e 7 x 5-ou-6, e sem isso os cubos ficam meio
 //     quadro fora dos dias, parecendo erro de renderizacao.
 //
-// Sem esses tres props, o comportamento e identico ao de fabrica.
+// Sem esses quatro props, o comportamento e identico ao de fabrica.
 import React, { useCallback, useEffect, useRef } from 'react';
 import gsap from 'gsap';
 
@@ -47,6 +52,8 @@ export interface CubesProps {
   stretch?: boolean;
   /** CUSTOMIZADO: numero de linhas, quando diferente de `gridSize`. */
   rows?: number;
+  /** CUSTOMIZADO: elemento que escuta o mouse, quando nao for a propria cena. */
+  pointerTarget?: React.RefObject<HTMLElement | null>;
 }
 
 const Cubes: React.FC<CubesProps> = ({
@@ -66,7 +73,8 @@ const Cubes: React.FC<CubesProps> = ({
   rippleSpeed = 2,
   className,
   stretch = false,
-  rows
+  rows,
+  pointerTarget
 }) => {
   const rowCount = rows ?? gridSize;
   const sceneRef = useRef<HTMLDivElement | null>(null);
@@ -279,29 +287,36 @@ const Cubes: React.FC<CubesProps> = ({
   }, [autoAnimate, gridSize, tiltAt]);
 
   useEffect(() => {
-    const el = sceneRef.current;
+    const externo = pointerTarget?.current ?? null;
+    const el = externo ?? sceneRef.current;
     if (!el) return;
     el.addEventListener('pointermove', onPointerMove);
     el.addEventListener('pointerleave', resetAll);
     el.addEventListener('click', onClick);
 
-    el.addEventListener('touchmove', onTouchMove, { passive: false });
-    el.addEventListener('touchstart', onTouchStart, { passive: true });
-    el.addEventListener('touchend', onTouchEnd, { passive: true });
+    // Num alvo externo os handlers de toque ficam de fora: onTouchMove chama
+    // preventDefault, e o alvo envolve conteudo real — travaria a rolagem.
+    if (!externo) {
+      el.addEventListener('touchmove', onTouchMove, { passive: false });
+      el.addEventListener('touchstart', onTouchStart, { passive: true });
+      el.addEventListener('touchend', onTouchEnd, { passive: true });
+    }
 
     return () => {
       el.removeEventListener('pointermove', onPointerMove);
       el.removeEventListener('pointerleave', resetAll);
       el.removeEventListener('click', onClick);
 
-      el.removeEventListener('touchmove', onTouchMove);
-      el.removeEventListener('touchstart', onTouchStart);
-      el.removeEventListener('touchend', onTouchEnd);
+      if (!externo) {
+        el.removeEventListener('touchmove', onTouchMove);
+        el.removeEventListener('touchstart', onTouchStart);
+        el.removeEventListener('touchend', onTouchEnd);
+      }
 
       if (rafRef.current != null) cancelAnimationFrame(rafRef.current);
       if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
     };
-  }, [onPointerMove, resetAll, onClick, onTouchMove, onTouchStart, onTouchEnd]);
+  }, [onPointerMove, resetAll, onClick, onTouchMove, onTouchStart, onTouchEnd, pointerTarget]);
 
   const cells = Array.from({ length: gridSize });
   const rowCells = Array.from({ length: rowCount });

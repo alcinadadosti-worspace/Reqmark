@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { addMonths, endOfMonth, endOfWeek, startOfMonth, startOfWeek } from 'date-fns';
@@ -44,6 +44,7 @@ export default function AgendaPage() {
   const [cursor, setCursor] = useState(() => startOfMonth(toLocalDate(today())));
   const [selectedDay, setSelectedDay] = useState<DayString | null>(null);
   const reduced = usePrefersReducedMotion();
+  const calendarRef = useRef<HTMLDivElement>(null);
 
   const day = today();
 
@@ -165,15 +166,18 @@ export default function AgendaPage() {
             desenha uma grade inteira, e uma instância por dia seriam 42 cenas.
             Uma só, com gridSize 7, acompanha as sete colunas da semana.
 
-            `pointer-events-none` é obrigatório — sem isso a camada engoliria o
-            clique que abre o dia. Como os cubos deixam de enxergar o mouse, o
-            `autoAnimate` é o que os mantém em movimento; o ripple de clique,
-            que nunca dispararia, fica desligado.
+            Eles reagem ao mouse, e só a ele: ficam parados até o ponteiro
+            passar por cima, como no componente original.
+
+            Isso exige um arranjo. A camada precisa de `pointer-events-none`,
+            senão engole o clique que abre o dia — mas aí ela também nunca vê
+            o mouse. Por isso o `pointerTarget` manda os listeners para este
+            contêiner, que é quem de fato recebe o ponteiro.
 
             As células são `bg-onyx-900/40`, então os cubos aparecem através
             delas sem apagar a cor que indica disponibilidade.
           */}
-          <div className="relative">
+          <div className="relative" ref={calendarRef}>
             {reduced ? null : (
               <div
                 className="pointer-events-none absolute inset-0 z-0 overflow-hidden opacity-90"
@@ -189,8 +193,9 @@ export default function AgendaPage() {
                   borderStyle="1.5px solid rgba(226, 185, 111, 0.85)"
                   faceColor="#14121A"
                   shadow={false}
-                  autoAnimate
+                  autoAnimate={false}
                   rippleOnClick={false}
+                  pointerTarget={calendarRef}
                 />
               </div>
             )}
