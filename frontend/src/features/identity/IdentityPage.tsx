@@ -124,6 +124,14 @@ export default function IdentityPage() {
           {reduced ? (
             <h1 className="mt-2 font-display text-4xl text-ivory sm:text-5xl">Quem é você?</h1>
           ) : (
+            /*
+              A pergunta chega desfocada e ganha nitidez letra a letra.
+
+              O blur vem pelo `from`/`to` do SplitText, que os repassa ao
+              `gsap.fromTo`, e não pelo BlurText: aquele componente renderiza um
+              `<p>` fixo, sem prop de tag, e trocá-lo aqui custaria o `<h1>` —
+              esta é a única heading da tela.
+            */
             <SplitText
               text="Quem é você?"
               tag="h1"
@@ -131,8 +139,8 @@ export default function IdentityPage() {
               delay={38}
               duration={0.7}
               splitType="chars"
-              from={{ opacity: 0, y: 26 }}
-              to={{ opacity: 1, y: 0 }}
+              from={{ opacity: 0, y: 26, filter: 'blur(12px)' }}
+              to={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
               textAlign="center"
             />
           )}
