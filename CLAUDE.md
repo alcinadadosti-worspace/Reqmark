@@ -129,6 +129,11 @@ topo de cada arquivo.
   pelo `orderBy('name')` do Firestore (que ordena por bytes e erra com acentos).
 - **`npm ci` apaga `node_modules`**: pare o servidor de dev antes, ou o Windows
   bloqueia os arquivos em uso.
+- **`NODE_ENV=production` faz o `npm ci` pular as `devDependencies`.** Nenhum
+  código do projeto lê `NODE_ENV` (o `isProduction` em `backend/src/env.ts` nem
+  é usado), mas o npm lê — e `typescript`, `vite` e `vite-plugin-pwa` são
+  dev. Por isso o `render-build` passa `--include=dev` nos dois `npm ci`. Sem
+  isso o deploy quebra em `Cannot find type definition file for 'vite/client'`.
 - Ao commitar pelo PowerShell, use `git commit -F arquivo.txt`. Here-strings
   quebram com aspas dentro da mensagem.
 

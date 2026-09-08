@@ -321,12 +321,14 @@ sua máquina e, em **Environment → Environment Variables**, clique em
 **“Add from .env”** e cole o conteúdo inteiro. O Render cria todas as chaves
 de uma vez — não precisa digitar uma a uma.
 
-Acrescente também estas duas, que são só do Render:
+O `NODE_VERSION` e o `NODE_ENV` já vêm no arquivo — não precisa acrescentar
+nada à mão.
 
-| Chave | Valor |
-| --- | --- |
-| `NODE_VERSION` | `22` |
-| `NODE_ENV` | `production` |
+> **Por que o `render-build` passa `--include=dev`.** Com `NODE_ENV=production`
+> no ambiente, o `npm ci` **pula as `devDependencies`** — e é lá que moram o
+> `typescript`, o `vite` e o `vite-plugin-pwa`, todos necessários para
+> *compilar*. Sem a flag o build morre com `Cannot find type definition file
+> for 'vite/client'` e um `tsc` global de outra versão reclamando do `baseUrl`.
 
 Para gerar o `ADMIN_TOKEN_SECRET`:
 
