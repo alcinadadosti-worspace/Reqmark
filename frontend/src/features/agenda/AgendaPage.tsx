@@ -11,7 +11,9 @@ import { EmptyState, SkeletonCard } from '@/components/ui/Feedback';
 import { Drawer } from '@/components/ui/Overlay';
 import { ItemIcon } from '@/components/icons/ItemIcon';
 import { STATUS_META } from '@/components/ui/StatusChip';
+import Cubes from '@/components/reactbits/Cubes/Cubes';
 import { useAppData } from '@/data/AppDataProvider';
+import { usePrefersReducedMotion } from '@/hooks/useMediaQuery';
 import { cn } from '@/lib/cn';
 import {
   formatDayLong,
@@ -41,6 +43,7 @@ export default function AgendaPage() {
   const [view, setView] = useState<View>('mes');
   const [cursor, setCursor] = useState(() => startOfMonth(toLocalDate(today())));
   const [selectedDay, setSelectedDay] = useState<DayString | null>(null);
+  const reduced = usePrefersReducedMotion();
 
   const day = today();
 
@@ -157,7 +160,42 @@ export default function AgendaPage() {
             ))}
           </div>
 
-          <div className="grid grid-cols-7 gap-1">
+          {/*
+            Cubos atrás dos dias, não dentro deles: o componente do React Bits
+            desenha uma grade inteira, e uma instância por dia seriam 42 cenas.
+            Uma só, com gridSize 7, acompanha as sete colunas da semana.
+
+            `pointer-events-none` é obrigatório — sem isso a camada engoliria o
+            clique que abre o dia. Como os cubos deixam de enxergar o mouse, o
+            `autoAnimate` é o que os mantém em movimento; o ripple de clique,
+            que nunca dispararia, fica desligado.
+
+            As células são `bg-onyx-900/40`, então os cubos aparecem através
+            delas sem apagar a cor que indica disponibilidade.
+          */}
+          <div className="relative">
+            {reduced ? null : (
+              <div
+                className="pointer-events-none absolute inset-0 z-0 overflow-hidden opacity-40"
+                aria-hidden
+              >
+                <Cubes
+                  className="h-full w-full"
+                  stretch
+                  gridSize={7}
+                  rows={gridDays.length / 7}
+                  maxAngle={38}
+                  radius={2}
+                  borderStyle="1px solid rgba(206, 161, 92, 0.45)"
+                  faceColor="#0E0E12"
+                  shadow={false}
+                  autoAnimate
+                  rippleOnClick={false}
+                />
+              </div>
+            )}
+
+            <div className="relative z-10 grid grid-cols-7 gap-1">
             {gridDays.map((current) => {
               const inMonth = current.slice(0, 7) === fromLocalDate(monthStart).slice(0, 7);
               const requests = byDay.get(current) ?? [];
@@ -212,6 +250,7 @@ export default function AgendaPage() {
                 </button>
               );
             })}
+            </div>
           </div>
 
           <div className="mt-3 flex flex-wrap items-center gap-4 px-1 text-2xs text-muted">
