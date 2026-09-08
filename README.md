@@ -321,8 +321,11 @@ sua máquina e, em **Environment → Environment Variables**, clique em
 **“Add from .env”** e cole o conteúdo inteiro. O Render cria todas as chaves
 de uma vez — não precisa digitar uma a uma.
 
-O `NODE_VERSION` e o `NODE_ENV` já vêm no arquivo — não precisa acrescentar
-nada à mão.
+O `NODE_VERSION` já vem no arquivo — não precisa acrescentar nada à mão.
+
+> **Não defina `NODE_ENV`.** Nada no projeto o lê, e ele só cria problema: no
+> Render fazia o `npm ci` pular as `devDependencies` (veja abaixo) e localmente
+> o Vite o recusa vindo de um `.env`.
 
 > **Por que o `render-build` passa `--include=dev`.** Com `NODE_ENV=production`
 > no ambiente, o `npm ci` **pula as `devDependencies`** — e é lá que moram o
