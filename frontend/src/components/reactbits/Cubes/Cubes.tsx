@@ -150,7 +150,7 @@ const Cubes: React.FC<CubesProps> = ({
         userActiveRef.current = false;
       }, 3000);
     },
-    [gridSize, tiltAt]
+    [gridSize, rowCount, tiltAt]
   );
 
   const resetAll = useCallback(() => {
@@ -186,7 +186,7 @@ const Cubes: React.FC<CubesProps> = ({
         userActiveRef.current = false;
       }, 3000);
     },
-    [gridSize, tiltAt]
+    [gridSize, rowCount, tiltAt]
   );
 
   const onTouchStart = useCallback(() => {
@@ -250,18 +250,18 @@ const Cubes: React.FC<CubesProps> = ({
           });
         });
     },
-    [rippleOnClick, gridSize, faceColor, rippleColor, rippleSpeed]
+    [rippleOnClick, gridSize, rowCount, faceColor, rippleColor, rippleSpeed]
   );
 
   useEffect(() => {
     if (!autoAnimate || !sceneRef.current) return;
     simPosRef.current = {
       x: Math.random() * gridSize,
-      y: Math.random() * gridSize
+      y: Math.random() * rowCount
     };
     simTargetRef.current = {
       x: Math.random() * gridSize,
-      y: Math.random() * gridSize
+      y: Math.random() * rowCount
     };
     const speed = 0.02;
     const loop = () => {
@@ -284,7 +284,7 @@ const Cubes: React.FC<CubesProps> = ({
     return () => {
       if (simRAFRef.current != null) cancelAnimationFrame(simRAFRef.current);
     };
-  }, [autoAnimate, gridSize, tiltAt]);
+  }, [autoAnimate, gridSize, rowCount, tiltAt]);
 
   useEffect(() => {
     const externo = pointerTarget?.current ?? null;
