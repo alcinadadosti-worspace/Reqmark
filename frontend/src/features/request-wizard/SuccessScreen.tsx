@@ -55,7 +55,7 @@ export function SuccessScreen({ requestId, number, onNewRequest }: SuccessScreen
       </div>
 
       <p className="mt-4 max-w-sm text-sm leading-relaxed text-muted">
-        A Suzana já recebeu o aviso no Slack. Assim que ela decidir, você é avisada aqui no app e
+        A Suzana já recebeu o aviso no Slack. Assim que ela decidir, você recebe o aviso aqui no app e
         também no seu Slack — não precisa ficar cobrando.
       </p>
 
