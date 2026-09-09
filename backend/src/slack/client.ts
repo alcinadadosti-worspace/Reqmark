@@ -6,7 +6,7 @@
  * Express, onde penduramos `/health` e `/admin/*` — um servico so, dentro das
  * horas gratuitas do Render (secao 4).
  */
-import { App, ExpressReceiver } from '@slack/bolt';
+import { App, ExpressReceiver, SocketModeReceiver } from '@slack/bolt';
 import type { KnownBlock } from '@slack/types';
 import { env } from '../env';
 import { createLogger, describeError } from '../lib/logger';
@@ -43,16 +43,50 @@ export const receiver = new ExpressReceiver({
  */
 export const usingSocketMode = Boolean(env.slackAppToken);
 
-export const slackApp = usingSocketMode
-  ? new App({
-      token: env.slackBotToken,
-      appToken: env.slackAppToken,
-      socketMode: true,
-    })
-  : new App({
-      token: env.slackBotToken,
-      receiver,
-    });
+/**
+ * Estado da conexao WebSocket, para o `/health` poder dizer se ela esta viva.
+ *
+ * Sem isso, "o clique nao chegou" tem duas leituras — o Slack nao mandou, ou a
+ * conexao caiu — e nao ha como escolher entre elas sem os logs do Render.
+ */
+export const socketState = {
+  conectado: false,
+  conexoes: 0,
+  desconexoes: 0,
+  ultimoEvento: null as string | null,
+  ultimoEventoEm: null as string | null,
+};
+
+/*
+ * O receiver do Modo Socket e criado a mao (em vez de deixar o Bolt cria-lo com
+ * `socketMode: true`) so para termos referencia ao cliente e poder observar os
+ * eventos de conexao.
+ */
+const socketReceiver = usingSocketMode
+  ? new SocketModeReceiver({ appToken: env.slackAppToken })
+  : null;
+
+if (socketReceiver) {
+  const mark = (evento: string, conectado: boolean) => {
+    socketState.conectado = conectado;
+    socketState.ultimoEvento = evento;
+    socketState.ultimoEventoEm = new Date().toISOString();
+    if (conectado) socketState.conexoes += 1;
+    else socketState.desconexoes += 1;
+    log.info(`socket: ${evento}`);
+  };
+
+  socketReceiver.client.on('connected', () => mark('connected', true));
+  socketReceiver.client.on('disconnected', () => mark('disconnected', false));
+  socketReceiver.client.on('error', (error: unknown) => {
+    log.error('socket: erro', describeError(error));
+  });
+}
+
+export const slackApp = new App({
+  token: env.slackBotToken,
+  receiver: socketReceiver ?? receiver,
+});
 
 log.info(usingSocketMode ? 'Slack em Modo Socket (WebSocket)' : 'Slack em modo HTTP (/slack/events)');
 

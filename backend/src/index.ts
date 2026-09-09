@@ -14,7 +14,7 @@ import { env } from './env';
 import { createLogger, describeError } from './lib/logger';
 import { createAdminRouter } from './routes/admin';
 import { registerSlackActions } from './slack/actions';
-import { receiver, slackApp, slackStats, usingSocketMode } from './slack/client';
+import { receiver, slackApp, slackStats, socketState, usingSocketMode } from './slack/client';
 import { serveFrontend } from './static';
 import { runCatchUp, startWatchers, stopWatchers } from './watchers';
 
@@ -93,6 +93,7 @@ async function main(): Promise<void> {
       // Diagnostico dos botoes do Slack — ver `slackStats` em slack/client.ts.
       slack: {
         transporte: usingSocketMode ? 'socket' : 'http',
+        ...(usingSocketMode ? { conexao: socketState } : {}),
         interacoes: slackStats.interactions,
         ultimaEm: slackStats.lastAt,
         ultimaAcao: slackStats.lastKind,
