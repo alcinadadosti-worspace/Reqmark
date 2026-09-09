@@ -2,6 +2,7 @@ import { Suspense, lazy, useEffect, type ReactNode } from 'react';
 import { Navigate, Outlet, Route, Routes, useLocation } from 'react-router-dom';
 import { AnimatePresence, motion } from 'motion/react';
 import { AppShell } from '@/components/layout/AppShell';
+import { AppDataProvider } from '@/data/AppDataProvider';
 import { MyRequestsProvider } from '@/data/MyRequestsProvider';
 import { LoadingScreen } from '@/components/ui/Feedback';
 import { useIdentityStore } from '@/store/identity';
@@ -31,14 +32,23 @@ function RequireIdentity({ children }: { children: ReactNode }) {
   return <>{children}</>;
 }
 
+/**
+ * Tudo que fala com o Firestore vive aqui dentro, depois do RequireIdentity.
+ *
+ * Antes o AppDataProvider montava na raiz, entao quem estava parado na tela
+ * de identidade — sem ter escolhido nome ainda — ja pagava as leituras de
+ * itens, configuracoes e ocupacao que aquela tela nao usa.
+ */
 function AppLayout() {
   return (
     <RequireIdentity>
-      <MyRequestsProvider>
-        <AppShell>
-          <Outlet />
-        </AppShell>
-      </MyRequestsProvider>
+      <AppDataProvider>
+        <MyRequestsProvider>
+          <AppShell>
+            <Outlet />
+          </AppShell>
+        </MyRequestsProvider>
+      </AppDataProvider>
     </RequireIdentity>
   );
 }

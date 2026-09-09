@@ -3,7 +3,6 @@ import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import { Toaster } from 'sonner';
 import App from './App';
-import { AppDataProvider } from '@/data/AppDataProvider';
 import { NoiseOverlay } from '@/components/layout/NoiseOverlay';
 import './index.css';
 
@@ -13,10 +12,9 @@ if (!container) throw new Error('Elemento #root não encontrado no index.html.')
 createRoot(container).render(
   <StrictMode>
     <BrowserRouter>
-      <AppDataProvider>
-        <NoiseOverlay />
-        <App />
-        <Toaster
+      <NoiseOverlay />
+      <App />
+      <Toaster
           position="top-center"
           expand={false}
           closeButton
@@ -35,7 +33,6 @@ createRoot(container).render(
             },
           }}
         />
-      </AppDataProvider>
     </BrowserRouter>
   </StrictMode>
 );

@@ -9,7 +9,7 @@ import { Avatar } from '@/components/ui/Avatar';
 import { LogoMark } from '@/components/ui/Logo';
 import { Input } from '@/components/ui/Field';
 import { ErrorNotice, LoadingScreen } from '@/components/ui/Feedback';
-import { useAppData } from '@/data/AppDataProvider';
+import { usePeople } from '@/data/usePeople';
 import { useIdentityStore } from '@/store/identity';
 import { usePrefersReducedMotion } from '@/hooks/useMediaQuery';
 import { searchPeople } from '@/lib/peopleSearch';
@@ -37,7 +37,7 @@ export default function IdentityPage() {
   const location = useLocation();
   const reduced = usePrefersReducedMotion();
 
-  const { users, ready, error } = useAppData();
+  const { users, ready, error } = usePeople();
   const identity = useIdentityStore((state) => state.identity);
   const setIdentity = useIdentityStore((state) => state.setIdentity);
   const unlockAdmin = useIdentityStore((state) => state.unlockAdmin);

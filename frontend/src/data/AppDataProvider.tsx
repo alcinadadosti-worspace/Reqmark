@@ -12,13 +12,12 @@ import {
   FALLBACK_SETTINGS,
   docToItem,
   docToRequest,
-  docToUser,
   mapSnapshot,
   queries,
   refs,
 } from '@/lib/collections';
 import { buildOccupancy, type OccupancyIndex, type StockItemRef } from '@/shared/availability';
-import type { AppSettings, AppUser, Item, MarketingRequest } from '@/shared/types';
+import type { AppSettings, Item, MarketingRequest } from '@/shared/types';
 import { isConfigured, missingEnvVars } from '@/lib/env';
 import { demoStore, isDemoMode } from '@/demo';
 
@@ -32,7 +31,6 @@ interface AppData {
   /** Forma reduzida que o motor de disponibilidade consome. */
   stockById: Map<string, StockItemRef>;
 
-  users: AppUser[];
   settings: AppSettings;
 
   /** Requisicoes que afetam a disponibilidade (pendentes + aprovadas). */
@@ -44,19 +42,16 @@ const AppDataContext = createContext<AppData | null>(null);
 
 interface Loaded {
   items: boolean;
-  users: boolean;
   settings: boolean;
   occupancy: boolean;
 }
 
 export function AppDataProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<Item[]>([]);
-  const [users, setUsers] = useState<AppUser[]>([]);
   const [settings, setSettings] = useState<AppSettings>(FALLBACK_SETTINGS);
   const [occupancyRequests, setOccupancyRequests] = useState<MarketingRequest[]>([]);
   const [loaded, setLoaded] = useState<Loaded>({
     items: false,
-    users: false,
     settings: false,
     occupancy: false,
   });
@@ -67,14 +62,13 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     if (isDemoMode()) {
       const sync = () => {
         setItems([...demoStore.items]);
-        setUsers([...demoStore.users]);
         setSettings({ ...demoStore.settings });
         setOccupancyRequests(
           demoStore.requests.filter(
             (request) => request.status === 'pending' || request.status === 'approved'
           )
         );
-        setLoaded({ items: true, users: true, settings: true, occupancy: true });
+        setLoaded({ items: true, settings: true, occupancy: true });
       };
 
       sync();
@@ -117,16 +111,6 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
           )
         );
 
-        unsubscribers.push(
-          onSnapshot(
-            queries.users(),
-            (snapshot) => {
-              setUsers(mapSnapshot(snapshot, docToUser).filter((user) => user.active));
-              setLoaded((state) => ({ ...state, users: true }));
-            },
-            fail('a lista de pessoas')
-          )
-        );
 
         unsubscribers.push(
           onSnapshot(
@@ -176,29 +160,23 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const value = useMemo<AppData>(() => {
-    // Ordena aqui, e não no Firestore: `orderBy('name')` ordena por bytes UTF-8,
-    // então "Ângela" cairia depois de "Zé". Com `localeCompare('pt-BR')` a lista
-    // fica na ordem que uma pessoa espera — e igual no modo demonstração.
-    const sortedUsers = [...users].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
-
     const itemsById = new Map(items.map((item) => [item.id, item]));
     const stockById = new Map<string, StockItemRef>(
       items.map((item) => [item.id, { id: item.id, name: item.name, quantity: item.quantity }])
     );
 
     return {
-      ready: loaded.items && loaded.users && loaded.settings && loaded.occupancy,
+      ready: loaded.items && loaded.settings && loaded.occupancy,
       error,
       items,
       activeItems: items.filter((item) => item.active),
       itemsById,
       stockById,
-      users: sortedUsers,
       settings,
       occupancyRequests,
       occupancy: buildOccupancy(occupancyRequests),
     };
-  }, [items, users, settings, occupancyRequests, loaded, error]);
+  }, [items, settings, occupancyRequests, loaded, error]);
 
   return <AppDataContext.Provider value={value}>{children}</AppDataContext.Provider>;
 }
