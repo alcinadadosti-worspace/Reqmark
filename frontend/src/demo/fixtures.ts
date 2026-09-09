@@ -10,6 +10,7 @@
  * item esgotado, pré-reserva concorrente, conflito com aprovada, e devolução.
  */
 import { addDays, today } from '@/shared/dates';
+import { FREQUENT_CITIES } from '@/shared/cities';
 import { USERS } from '@/shared/users';
 import type {
   AppSettings,
@@ -150,12 +151,7 @@ export const DEMO_ITEMS: Item[] = [
 export const DEMO_SETTINGS: AppSettings = {
   adminSlackId: 'U09F9LWM6MC',
   appUrl: 'http://localhost:5173',
-  cities: [
-    { name: 'Penedo', state: 'AL', lat: -10.2906, lng: -36.5861 },
-    { name: 'Arapiraca', state: 'AL', lat: -9.7519, lng: -36.6611 },
-    { name: 'Palmeira dos Índios', state: 'AL', lat: -9.4058, lng: -36.6281 },
-    { name: 'Maceió', state: 'AL', lat: -9.6658, lng: -35.7353 },
-  ],
+  cities: FREQUENT_CITIES,
   purposeTypes: DEFAULT_PURPOSE_TYPES,
 };
 

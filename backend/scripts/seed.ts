@@ -15,18 +15,11 @@
 import { collections, db, serverTimestamp } from '../src/firebase';
 import { env } from '../src/env';
 import { DEFAULT_PURPOSE_TYPES, type ItemInput } from '../src/shared/types';
+import { FREQUENT_CITIES } from '../src/shared/cities';
 import { USERS } from '../src/shared/users';
 
 const ADMIN_SLACK_ID = 'U09F9LWM6MC';
 
-/** Cidades frequentes. As coordenadas sao reserva; o geocoder confirma no seed. */
-const CITIES = [
-  { name: 'Palmeira dos Índios', state: 'AL', lat: -9.4058, lng: -36.6281 },
-  { name: 'São Sebastião', state: 'AL', lat: -9.9333, lng: -36.5667 },
-  { name: 'Teotônio Vilela', state: 'AL', lat: -9.9042, lng: -36.355 },
-  { name: 'Coruripe', state: 'AL', lat: -10.1256, lng: -36.1756 },
-  { name: 'Penedo', state: 'AL', lat: -10.2906, lng: -36.5861 },
-];
 
 /**
  * Quantidades e caracteristicas sao PLACEHOLDERS — a Suzana ajusta no painel.
@@ -110,7 +103,7 @@ const ITEMS: (ItemInput & { slug: string })[] = [
 ];
 
 /** Confere as coordenadas de uma cidade no Photon. Reserva em caso de falha. */
-async function resolveCity(city: (typeof CITIES)[number]): Promise<(typeof CITIES)[number]> {
+async function resolveCity(city: (typeof FREQUENT_CITIES)[number]): Promise<(typeof FREQUENT_CITIES)[number]> {
   const url = new URL('https://photon.komoot.io/api/');
   url.searchParams.set('q', `${city.name}, ${city.state}, Brasil`);
   url.searchParams.set('limit', '5');
@@ -229,7 +222,7 @@ async function seedSettings(): Promise<void> {
   console.log('  Validando coordenadas das cidades no geocoder:');
 
   const cities = [];
-  for (const city of CITIES) {
+  for (const city of FREQUENT_CITIES) {
     cities.push(await resolveCity(city));
     // Gentileza com a API pública gratuita.
     await new Promise((resolve) => setTimeout(resolve, 400));
