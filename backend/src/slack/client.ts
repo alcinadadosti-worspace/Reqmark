@@ -37,6 +37,27 @@ export const slackApp = new App({
 
 export const slack = slackApp.client;
 
+/**
+ * Quantas interacoes o Slack ja entregou a este processo.
+ *
+ * Existe para responder, sem acesso aos logs do Render, a pergunta que trava
+ * qualquer diagnostico de botao: "o clique chegou ate aqui?". Se a pessoa
+ * clica e este contador nao sobe, o problema esta na CONFIGURACAO do Slack
+ * (Request URL ausente, Modo Socket ligado), nao no nosso codigo. Exposto em
+ * `/health`, sem nenhum dado sensivel.
+ */
+export const slackStats = {
+  interactions: 0,
+  lastAt: null as string | null,
+  lastKind: null as string | null,
+};
+
+export function recordSlackInteraction(kind: string): void {
+  slackStats.interactions += 1;
+  slackStats.lastAt = new Date().toISOString();
+  slackStats.lastKind = kind;
+}
+
 /** Cache de `users.conversations`: o canal de DM de alguem nao muda. */
 const dmChannelCache = new Map<string, string>();
 

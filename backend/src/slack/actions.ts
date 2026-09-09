@@ -19,7 +19,7 @@ import {
   alreadyDecidedModal,
   rejectModal,
 } from './blocks';
-import { postDm, postEphemeral, slackApp } from './client';
+import { postDm, postEphemeral, recordSlackInteraction, slackApp } from './client';
 
 const log = createLogger('slack:actions');
 
@@ -59,6 +59,23 @@ async function warnAlreadyDecided(
 }
 
 export function registerSlackActions(): void {
+  /*
+    Middleware global: roda em TODA interacao entregue pelo Slack, inclusive
+    nas que nenhum handler reconhece. E o que permite ao `/health` dizer se o
+    clique chegou — sem isso, um botao mudo e indistinguivel de um Slack mal
+    configurado.
+  */
+  slackApp.use(async ({ body, next }) => {
+    const payload = body as { type?: string; actions?: { action_id?: string }[]; view?: { callback_id?: string } };
+    const kind =
+      payload?.actions?.[0]?.action_id ??
+      payload?.view?.callback_id ??
+      payload?.type ??
+      'desconhecida';
+    recordSlackInteraction(kind);
+    await next();
+  });
+
   /**
    * O Slack exige `ack()` tambem para botoes que sao apenas links, senao a
    * interacao fica marcada como falha na interface.

@@ -14,7 +14,7 @@ import { env } from './env';
 import { createLogger, describeError } from './lib/logger';
 import { createAdminRouter } from './routes/admin';
 import { registerSlackActions } from './slack/actions';
-import { receiver, slackApp } from './slack/client';
+import { receiver, slackApp, slackStats } from './slack/client';
 import { serveFrontend } from './static';
 import { runCatchUp, startWatchers, stopWatchers } from './watchers';
 
@@ -90,6 +90,12 @@ async function main(): Promise<void> {
       service: 'am-marketing-api',
       uptimeSeconds: Math.round((Date.now() - bootedAt) / 1000),
       timestamp: new Date().toISOString(),
+      // Diagnostico dos botoes do Slack — ver `slackStats` em slack/client.ts.
+      slack: {
+        interacoes: slackStats.interactions,
+        ultimaEm: slackStats.lastAt,
+        ultimaAcao: slackStats.lastKind,
+      },
     });
   });
 
