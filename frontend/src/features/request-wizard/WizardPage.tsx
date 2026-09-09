@@ -50,7 +50,15 @@ export default function WizardPage() {
   const day = today();
   const lines = useMemo(() => selectionToLines(wizard.selection), [wizard.selection]);
 
-  /** Só as linhas cujos itens ainda existem no catálogo. */
+  /**
+   * Só as linhas cujos itens existem E estão ativos.
+   *
+   * A seleção vive no sessionStorage, então pode carregar um item que a
+   * administradora desativou depois da escolha. `itemsById` inclui os
+   * inativos de propósito (as requisições antigas precisam resolver o nome);
+   * sem este filtro, o pedido passava por todas as validações e chegava ao
+   * Slack pedindo um item fora de circulação.
+   */
   const resolvedLines = useMemo(
     () =>
       lines
@@ -58,20 +66,28 @@ export default function WizardPage() {
           const item = itemsById.get(line.itemId);
           return item ? { item, quantity: line.quantity } : null;
         })
-        .filter((entry): entry is { item: Item; quantity: number } => entry !== null),
+        .filter(
+          (entry): entry is { item: Item; quantity: number } => entry !== null && entry.item.active
+        ),
     [lines, itemsById]
   );
 
+  /** A mesma seleção, já sem itens inexistentes ou inativos, para o motor. */
+  const resolvedSelection = useMemo(
+    () => resolvedLines.map(({ item, quantity }) => ({ itemId: item.id, quantity })),
+    [resolvedLines]
+  );
+
   const evaluation = useMemo(() => {
-    if (!wizard.startDate || !wizard.endDate || lines.length === 0) return null;
+    if (!wizard.startDate || !wizard.endDate || resolvedSelection.length === 0) return null;
     return evaluatePeriod({
-      selection: lines,
+      selection: resolvedSelection,
       items: stockById,
       index: occupancy,
       startDate: wizard.startDate,
       endDate: wizard.endDate,
     });
-  }, [lines, stockById, occupancy, wizard.startDate, wizard.endDate]);
+  }, [resolvedSelection, stockById, occupancy, wizard.startDate, wizard.endDate]);
 
   // --- Validação por passo -------------------------------------------------
 
@@ -116,7 +132,7 @@ export default function WizardPage() {
       // Revalida contra o estado mais recente: alguém pode ter sido aprovado
       // enquanto esta pessoa preenchia o formulário.
       const fresh = evaluatePeriod({
-        selection: lines,
+        selection: resolvedSelection,
         items: stockById,
         index: occupancy,
         startDate: wizard.startDate,
@@ -303,7 +319,7 @@ export default function WizardPage() {
 
         <Step>
           <StepPeriod
-            selection={lines}
+            selection={resolvedSelection}
             items={stockById}
             occupancy={occupancy}
             startDate={wizard.startDate}
