@@ -30,10 +30,31 @@ export const receiver = new ExpressReceiver({
   processBeforeResponse: false,
 });
 
-export const slackApp = new App({
-  token: env.slackBotToken,
-  receiver,
-});
+/**
+ * Como o Slack entrega os cliques a este processo.
+ *
+ * O `ExpressReceiver` acima e criado SEMPRE, porque e dele que sai o router do
+ * Express onde moram `/health`, `/admin/*` e o site. O que muda e quem escuta
+ * as interacoes: com `SLACK_APP_TOKEN` preenchido, o Bolt abre a conexao
+ * WebSocket do Modo Socket; sem ele, continua recebendo por HTTP no
+ * `/slack/events`.
+ *
+ * Os dois modos compartilham exatamente os mesmos handlers.
+ */
+export const usingSocketMode = Boolean(env.slackAppToken);
+
+export const slackApp = usingSocketMode
+  ? new App({
+      token: env.slackBotToken,
+      appToken: env.slackAppToken,
+      socketMode: true,
+    })
+  : new App({
+      token: env.slackBotToken,
+      receiver,
+    });
+
+log.info(usingSocketMode ? 'Slack em Modo Socket (WebSocket)' : 'Slack em modo HTTP (/slack/events)');
 
 export const slack = slackApp.client;
 

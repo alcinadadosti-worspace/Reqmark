@@ -42,6 +42,20 @@ export const env = {
   // Slack
   slackBotToken: required('SLACK_BOT_TOKEN'),
   slackSigningSecret: required('SLACK_SIGNING_SECRET'),
+
+  /**
+   * Token de nivel de app (`xapp-...`), com o escopo `connections:write`.
+   *
+   * OPCIONAL, e a sua presenca e que escolhe como o Slack entrega os cliques:
+   *
+   *   - vazio  -> modo HTTP: o Slack faz POST na Request URL configurada em
+   *               "Interatividade e Atalhos". E o padrao e o preferivel.
+   *   - preenchido -> Modo Socket: o app ABRE uma conexao WebSocket com o
+   *               Slack e recebe as interacoes por ela. Necessario quando o
+   *               workspace mantem o Modo Socket ligado, situacao em que o
+   *               Slack IGNORA a Request URL e os botoes ficam mudos.
+   */
+  slackAppToken: optional('SLACK_APP_TOKEN'),
   adminSlackId: optional('ADMIN_SLACK_ID', 'U09F9LWM6MC'),
 
   // Firebase

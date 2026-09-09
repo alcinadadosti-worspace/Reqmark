@@ -14,7 +14,7 @@ import { env } from './env';
 import { createLogger, describeError } from './lib/logger';
 import { createAdminRouter } from './routes/admin';
 import { registerSlackActions } from './slack/actions';
-import { receiver, slackApp, slackStats } from './slack/client';
+import { receiver, slackApp, slackStats, usingSocketMode } from './slack/client';
 import { serveFrontend } from './static';
 import { runCatchUp, startWatchers, stopWatchers } from './watchers';
 
@@ -92,6 +92,7 @@ async function main(): Promise<void> {
       timestamp: new Date().toISOString(),
       // Diagnostico dos botoes do Slack — ver `slackStats` em slack/client.ts.
       slack: {
+        transporte: usingSocketMode ? 'socket' : 'http',
         interacoes: slackStats.interactions,
         ultimaEm: slackStats.lastAt,
         ultimaAcao: slackStats.lastKind,
@@ -114,8 +115,26 @@ async function main(): Promise<void> {
 
   registerSlackActions();
 
-  await slackApp.start(env.port);
-  log.info(`ouvindo na porta ${env.port} (app: ${env.appUrl})`);
+  /*
+    Em Modo Socket o `start()` do Bolt abre o WebSocket e NAO sobe servidor
+    HTTP nenhum — mas continuamos precisando do Express para `/health`,
+    `/admin/*` e para servir o site. Por isso, nesse modo, subimos o Express
+    na mao. No modo HTTP o proprio Bolt cuida das duas coisas.
+  */
+  if (usingSocketMode) {
+    await slackApp.start();
+    await new Promise<void>((resolve) => {
+      app.listen(env.port, () => resolve());
+    });
+  } else {
+    await slackApp.start(env.port);
+  }
+
+  log.info(
+    `ouvindo na porta ${env.port} (app: ${env.appUrl}) — Slack por ${
+      usingSocketMode ? 'Modo Socket' : 'HTTP'
+    }`
+  );
 
   // Primeiro o catch-up (processa o que ficou parado), depois os listeners.
   await runCatchUp();
