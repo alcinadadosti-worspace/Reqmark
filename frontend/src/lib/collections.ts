@@ -83,6 +83,7 @@ export function docToUser(snapshot: Snap): AppUser {
     slackId: snapshot.id,
     name: data.name ?? '',
     role: (data.role as UserRole) ?? 'requester',
+    sector: data.sector ?? '',
     active: data.active !== false,
     createdAt: data.createdAt ?? null,
   };

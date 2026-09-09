@@ -30,6 +30,8 @@ export interface AppUser {
   slackId: string;
   name: string;
   role: UserRole;
+  /** Setor pelo qual a pessoa responde. Vazio em cadastros antigos. */
+  sector: string;
   active: boolean;
   createdAt?: TimestampLike | null;
 }

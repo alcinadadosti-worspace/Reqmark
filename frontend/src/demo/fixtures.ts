@@ -43,16 +43,11 @@ const D = today();
 
 const ADMIN_SLACK_ID = 'U09F9LWM6MC';
 
-/**
- * A equipe completa, do mesmo cadastro que o seed usa (`@/shared/users`).
- *
- * De propósito não é um recorte: a tela de identidade existe para achar uma
- * pessoa entre ~110, e uma demonstração com 15 nomes esconderia exatamente o
- * que a busca e a rolagem precisam resolver.
- */
+/** Os líderes de setor, do mesmo cadastro que o seed usa (`@/shared/users`). */
 export const DEMO_USERS: AppUser[] = USERS.map((user) => ({
   slackId: user.slackId,
   name: user.name,
+  sector: user.sector,
   role: user.slackId === ADMIN_SLACK_ID ? 'admin' : 'requester',
   active: true,
 }));

@@ -93,10 +93,14 @@ export default function IdentityPage() {
           <Avatar name={user.name} size="md" highlighted={user.role === 'admin'} />
           <span className="min-w-0 flex-1">
             <span className="block truncate text-[0.95rem] text-ivory">{user.name}</span>
+            {/* O setor identifica melhor que o nome sozinho: são homônimos de
+                sobrenome e a lista agora é de responsáveis, não da empresa toda. */}
             {user.role === 'admin' ? (
-              <span className="text-2xs uppercase tracking-[0.14em] text-gold-500/80">
-                Administradora do Marketing
+              <span className="block truncate text-2xs uppercase tracking-[0.14em] text-gold-500/80">
+                {user.sector || 'Marketing'} · Administradora
               </span>
+            ) : user.sector ? (
+              <span className="block truncate text-2xs text-muted">{user.sector}</span>
             ) : null}
           </span>
         </div>

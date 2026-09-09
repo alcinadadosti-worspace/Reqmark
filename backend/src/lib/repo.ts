@@ -81,6 +81,7 @@ export function toUser(snapshot: AnySnapshot): AppUser {
     slackId: snapshot.id,
     name: String(data.name ?? ''),
     role: (data.role as UserRole) ?? 'requester',
+    sector: String(data.sector ?? ''),
     active: data.active !== false,
     createdAt: data.createdAt ?? null,
   };
