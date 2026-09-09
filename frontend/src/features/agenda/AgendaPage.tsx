@@ -2,7 +2,9 @@ import { useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { addMonths, endOfMonth, endOfWeek, startOfMonth, startOfWeek } from 'date-fns';
-import { CalendarDays, ChevronLeft, ChevronRight, MapPin, Rows3 } from 'lucide-react';
+// `Map` do lucide vira `MapIcon`: sem o apelido ele sombreia o Map nativo do
+// JavaScript, que esta logo abaixo em `new Map()`.
+import { CalendarDays, ChevronLeft, ChevronRight, Map as MapIcon, MapPin, Rows3 } from 'lucide-react';
 import { Chip, ChipRow } from '@/components/ui/Chip';
 import { Button } from '@/components/ui/Button';
 import { GlassCard, PageHeader } from '@/components/ui/Surface';
@@ -12,9 +14,12 @@ import { Drawer } from '@/components/ui/Overlay';
 import { ItemIcon } from '@/components/icons/ItemIcon';
 import { STATUS_META } from '@/components/ui/StatusChip';
 import Cubes from '@/components/reactbits/Cubes/Cubes';
+import { LazyActivationsMap } from '@/components/map/LazyActivationsMap';
+import type { ActivationPin } from '@/components/map/ActivationsMap';
 import { useAppData } from '@/data/AppDataProvider';
 import { usePrefersReducedMotion } from '@/hooks/useMediaQuery';
 import { cn } from '@/lib/cn';
+import { cityLabel } from '@/lib/geocode';
 import {
   formatDayLong,
   formatMonthTitle,
@@ -27,7 +32,7 @@ import { itemSchedule } from '@/shared/availability';
 import { compareDays, daysBetweenInclusive, eachDay, isWithin } from '@/shared/dates';
 import type { DayString, MarketingRequest } from '@/shared/types';
 
-type View = 'mes' | 'itens';
+type View = 'mes' | 'itens' | 'mapa';
 
 const WEEKDAYS = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'];
 
@@ -92,6 +97,33 @@ export default function AgendaPage() {
 
   const totalDaysInMonth = daysBetweenInclusive(fromLocalDate(monthStart), fromLocalDate(monthEnd));
 
+  /**
+   * Onde os itens estão. Só as reservas APROVADAS que cobrem hoje: pendente
+   * ainda não é posse de ninguém, e mostrar no mapa daria a entender que sim.
+   *
+   * O título é o item, não o número da requisição — quem abre a agenda quer
+   * saber onde está a tenda, não qual foi o pedido.
+   */
+  const pins = useMemo<ActivationPin[]>(
+    () =>
+      occupancyRequests
+        .filter(
+          (request) =>
+            request.status === 'approved' &&
+            compareDays(request.startDate, day) <= 0 &&
+            compareDays(request.endDate, day) >= 0
+        )
+        .map((request) => ({
+          id: request.id,
+          lat: request.city.lat,
+          lng: request.city.lng,
+          title: request.items.map((line) => line.itemName).join(', ') || 'Materiais do Marketing',
+          subtitle: `${cityLabel(request.city)} · volta ${formatDayLong(request.endDate)} · com ${request.requesterName}`,
+          active: true,
+        })),
+    [occupancyRequests, day]
+  );
+
   const selectedRequests = selectedDay ? (byDay.get(selectedDay) ?? []) : [];
 
   return (
@@ -109,6 +141,9 @@ export default function AgendaPage() {
           </Chip>
           <Chip selected={view === 'itens'} onClick={() => setView('itens')} icon={<Rows3 className="h-4 w-4" />}>
             Por item
+          </Chip>
+          <Chip selected={view === 'mapa'} onClick={() => setView('mapa')} icon={<MapIcon className="h-4 w-4" />}>
+            No mapa
           </Chip>
         </ChipRow>
 
@@ -274,6 +309,31 @@ export default function AgendaPage() {
               Pendente (pré-reserva)
             </span>
           </div>
+        </GlassCard>
+      ) : view === 'mapa' ? (
+        <GlassCard className="overflow-hidden p-0">
+          {pins.length === 0 ? (
+            <EmptyState
+              className="!py-16"
+              icon={<MapIcon className="h-7 w-7" strokeWidth={1.2} aria-hidden />}
+              title="Nenhum material em campo hoje"
+              description="Quando uma reserva aprovada começar, o item aparece aqui com a cidade onde está e a data em que volta."
+            />
+          ) : (
+            <>
+              {/* A altura vai no `className`, que o componente aplica no próprio
+                  MapContainer. Numa div externa o mapa nasce sem altura e o
+                  Leaflet desenha os tiles fora da área visível. */}
+              <LazyActivationsMap pins={pins} className="h-[26rem] w-full sm:h-[32rem]" />
+              <p className="border-t border-gold-500/15 px-4 py-3 text-2xs leading-relaxed text-muted">
+                {pins.length === 1
+                  ? '1 material em campo agora.'
+                  : `${pins.length} materiais em campo agora.`}{' '}
+                Só aparecem reservas já aprovadas e em curso — pré-reservas pendentes ainda não
+                ocupam o item.
+              </p>
+            </>
+          )}
         </GlassCard>
       ) : timelineItems.length === 0 ? (
         <EmptyState
