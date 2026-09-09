@@ -18,6 +18,18 @@ function useOverlayBehavior(open: boolean, onClose: () => void) {
   const panelRef = useRef<HTMLDivElement>(null);
   const previouslyFocused = useRef<HTMLElement | null>(null);
 
+  /*
+    `onClose` chega quase sempre como arrow inline (`() => setX(null)`): uma
+    funcao nova a cada render do pai. Como dependencia do efeito, cada snapshot
+    do Firestore refazia tudo com a camada ABERTA — destravava a rolagem do
+    fundo, devolvia o foco ao elemento de tras, travava de novo e 40 ms depois
+    puxava o foco para dentro outra vez. Em ref, o efeito depende so de `open`.
+  */
+  const onCloseRef = useRef(onClose);
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
+
   useEffect(() => {
     if (!open) return;
 
@@ -39,7 +51,7 @@ function useOverlayBehavior(open: boolean, onClose: () => void) {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         event.stopPropagation();
-        onClose();
+        onCloseRef.current();
         return;
       }
 
@@ -74,7 +86,7 @@ function useOverlayBehavior(open: boolean, onClose: () => void) {
       document.body.style.paddingRight = paddingRight;
       previouslyFocused.current?.focus?.({ preventScroll: true });
     };
-  }, [open, onClose]);
+  }, [open]);
 
   return panelRef;
 }
