@@ -6,7 +6,7 @@
  * "aprovar pelo app" produzem exatamente os mesmos efeitos — status, evento na
  * timeline, `chat.update` no card original e DM ao solicitante.
  */
-import { FieldValue, collections, serverTimestamp } from '../firebase';
+import { FieldValue, collections, db, serverTimestamp } from '../firebase';
 import { env } from '../env';
 import { createLogger, describeError } from '../lib/logger';
 import { analyseRequest } from '../lib/conflicts';
@@ -110,14 +110,46 @@ export async function decideRequest(input: DecideInput): Promise<DecideResult> {
     ...(note ? { note } : {}),
   };
 
-  await collections.requests().doc(request.id).update({
-    status,
-    decision,
-    updatedAt: serverTimestamp(),
-    'notify.adminPending': false,
-    // Quem recebe a novidade agora é o solicitante.
-    'unread.requester': FieldValue.increment(1),
-    'unread.admin': 0,
+  /*
+    A guarda de "ja decidida" tem de ser atomica.
+
+    Ate aqui ja se passaram centenas de milissegundos lendo itens e ocupacao
+    para revalidar o conflito. Duas decisoes concorrentes passariam as duas
+    pelo `if (request.status !== 'pending')` la em cima e gravariam as duas —
+    dois eventos, dois incrementos de nao lidas e duas DMs para o solicitante.
+
+    E o caso concorrente nao e teorico: o Slack REENVIA a interacao quando o
+    `ack` demora mais de 3s, que e justamente o cold start do Render. O
+    reenvio chega enquanto o primeiro ainda esta na revalidacao.
+
+    Reler dentro da transacao fecha a janela: quem chegar em segundo encontra o
+    status ja mudado e recebe o mesmo `already_decided` de sempre.
+  */
+  const ref = collections.requests().doc(request.id);
+  await db().runTransaction(async (transaction) => {
+    const snapshot = await transaction.get(ref);
+    const current = snapshot.data();
+
+    if (!current) throw new DecisionError('not_found', 'Requisição não encontrada.', 404);
+
+    if (current.status !== 'pending') {
+      throw new DecisionError(
+        'already_decided',
+        `Esta requisição já foi decidida (status: ${current.status}).`,
+        409,
+        { status: current.status }
+      );
+    }
+
+    transaction.update(ref, {
+      status,
+      decision,
+      updatedAt: serverTimestamp(),
+      'notify.adminPending': false,
+      // Quem recebe a novidade agora é o solicitante.
+      'unread.requester': FieldValue.increment(1),
+      'unread.admin': 0,
+    });
   });
 
   await appendEvent(request.id, {
@@ -160,12 +192,30 @@ export async function markReturned(requestId: string, actor: Actor): Promise<Mar
 
   const returnedOn = today();
 
-  await collections.requests().doc(requestId).update({
-    status: 'returned',
-    returnedAt: serverTimestamp(),
-    returnedOn,
-    updatedAt: serverTimestamp(),
-    'unread.requester': FieldValue.increment(1),
+  // Mesma guarda atomica da decisao: um duplo-clique em "Devolvido" geraria
+  // dois eventos e dois incrementos de nao lidas.
+  const ref = collections.requests().doc(requestId);
+  await db().runTransaction(async (transaction) => {
+    const snapshot = await transaction.get(ref);
+    const current = snapshot.data();
+
+    if (!current) throw new DecisionError('not_found', 'Requisição não encontrada.', 404);
+
+    if (current.status !== 'approved') {
+      throw new DecisionError(
+        'invalid_status',
+        `Só dá para marcar devolução de uma requisição aprovada (status atual: ${current.status}).`,
+        409
+      );
+    }
+
+    transaction.update(ref, {
+      status: 'returned',
+      returnedAt: serverTimestamp(),
+      returnedOn,
+      updatedAt: serverTimestamp(),
+      'unread.requester': FieldValue.increment(1),
+    });
   });
 
   await appendEvent(requestId, {
