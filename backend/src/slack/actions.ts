@@ -11,7 +11,14 @@ import { createLogger, describeError } from '../lib/logger';
 import { describeConflict } from '../lib/conflicts';
 import { getRequest } from '../lib/repo';
 import { DecisionError, adminActor, decideRequest } from '../services/decisions';
-import { ACTION_APPROVE, ACTION_OPEN_APP, ACTION_REJECT, VIEW_REJECT, rejectModal } from './blocks';
+import {
+  ACTION_APPROVE,
+  ACTION_OPEN_APP,
+  ACTION_REJECT,
+  VIEW_REJECT,
+  alreadyDecidedModal,
+  rejectModal,
+} from './blocks';
 import { postDm, postEphemeral, slackApp } from './client';
 
 const log = createLogger('slack:actions');
@@ -137,23 +144,19 @@ export function registerSlackActions(): void {
     if (!requestId) return;
     if (await refuseIfNotAdmin(user, channel)) return;
 
+    /*
+      O modal abre ANTES de qualquer leitura. O `trigger_id` vale 3 s a partir
+      do clique, e o Firestore pode gastar isso so para acordar no primeiro
+      acesso do dia — ler primeiro era garantir que, exatamente de manha, o
+      botao Reprovar nao abrisse nada.
+    */
+    let viewId: string | undefined;
     try {
-      const request = await getRequest(requestId);
-      if (!request) return;
-
-      if (request.status !== 'pending') {
-        await warnAlreadyDecided(
-          channel,
-          user,
-          `Esta requisição já foi decidida (status: ${request.status}).`
-        );
-        return;
-      }
-
-      await client.views.open({
+      const opened = await client.views.open({
         trigger_id: body.trigger_id,
-        view: rejectModal(requestId, request),
+        view: rejectModal(requestId),
       });
+      viewId = opened.view?.id;
     } catch (error) {
       log.error(`falha ao abrir o modal de reprovação de ${requestId}`, describeError(error));
       if (channel) {
@@ -163,6 +166,22 @@ export function registerSlackActions(): void {
           'Não consegui abrir a janela de reprovação. Tente pelo botão "Abrir no app".'
         );
       }
+      return;
+    }
+
+    // Com o modal ja na tela, completa os detalhes — ou avisa que ja foi decidida.
+    try {
+      const request = await getRequest(requestId);
+      if (!request || !viewId) return;
+
+      await client.views.update({
+        view_id: viewId,
+        view:
+          request.status === 'pending' ? rejectModal(requestId, request) : alreadyDecidedModal(request),
+      });
+    } catch (error) {
+      // O modal minimo ja esta aberto e funciona; so os detalhes ficaram de fora.
+      log.warn(`nao consegui completar o modal de ${requestId}`, describeError(error));
     }
   });
 

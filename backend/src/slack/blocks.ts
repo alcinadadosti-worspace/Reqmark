@@ -241,23 +241,39 @@ export function decidedBlocks({ request, status, byName, at, note }: DecidedCard
   return blocks;
 }
 
-/** Modal do motivo da reprovação (`views.open`). */
-export function rejectModal(requestId: string, request: MarketingRequest) {
+/**
+ * Modal do motivo da reprovação (`views.open`).
+ *
+ * `request` e opcional de proposito: o `trigger_id` do Slack vale 3 s, e no
+ * primeiro acesso do dia o Firestore pode gastar isso so para acordar. O
+ * handler abre o modal PRIMEIRO, sem detalhes, e completa com `views.update`
+ * quando a leitura chega. Titulo de modal tem limite de 24 caracteres.
+ */
+export function rejectModal(requestId: string, request?: MarketingRequest) {
+  const details: KnownBlock[] = request
+    ? [
+        {
+          type: 'section',
+          text: {
+            type: 'mrkdwn',
+            text: `*${request.requesterName}* — ${cityLine(request)}\n${periodLine(request)}`,
+          },
+        },
+      ]
+    : [];
+
   return {
     type: 'modal' as const,
     callback_id: VIEW_REJECT,
     private_metadata: requestId,
-    title: { type: 'plain_text' as const, text: `Reprovar ${ticketNumber(request.number)}` },
+    title: {
+      type: 'plain_text' as const,
+      text: request ? `Reprovar ${ticketNumber(request.number)}` : 'Reprovar requisição',
+    },
     submit: { type: 'plain_text' as const, text: 'Reprovar' },
     close: { type: 'plain_text' as const, text: 'Cancelar' },
     blocks: [
-      {
-        type: 'section' as const,
-        text: {
-          type: 'mrkdwn' as const,
-          text: `*${request.requesterName}* — ${cityLine(request)}\n${periodLine(request)}`,
-        },
-      },
+      ...details,
       {
         type: 'input' as const,
         block_id: 'reason_block',
@@ -275,6 +291,28 @@ export function rejectModal(requestId: string, request: MarketingRequest) {
             type: 'plain_text' as const,
             text: 'Ex.: a tenda já está reservada para a ação de Arapiraca nesse fim de semana.',
           },
+        },
+      },
+    ],
+  };
+}
+
+/**
+ * Substitui o modal quando a requisicao ja foi decidida antes de a
+ * administradora terminar de abri-lo. Sem `input` e sem `submit`: so ler e
+ * fechar — nao ha o que reprovar.
+ */
+export function alreadyDecidedModal(request: MarketingRequest) {
+  return {
+    type: 'modal' as const,
+    title: { type: 'plain_text' as const, text: 'Já decidida' },
+    close: { type: 'plain_text' as const, text: 'Fechar' },
+    blocks: [
+      {
+        type: 'section' as const,
+        text: {
+          type: 'mrkdwn' as const,
+          text: `A requisição ${ticketNumber(request.number)} já foi decidida (status: *${request.status}*).`,
         },
       },
     ],
