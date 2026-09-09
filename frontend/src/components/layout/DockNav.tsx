@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { CalendarDays, Inbox, Plus, ShieldCheck, Sparkles } from 'lucide-react';
 import Dock, { type DockItemData } from '@/components/reactbits/Dock/Dock';
 import { cn } from '@/lib/cn';
-import { NAV_ITEMS } from './navItems';
+import { navItemsFor } from './navItems';
 
 const ICONS = {
   itens: Sparkles,
@@ -30,7 +30,7 @@ export function DockNav({ isAdmin, unread }: DockNavProps) {
   const location = useLocation();
 
   const items = useMemo<DockItemData[]>(() => {
-    return NAV_ITEMS.filter((item) => !item.adminOnly || isAdmin).map((item) => {
+    return navItemsFor(isAdmin).map((item) => {
       const Icon = ICONS[item.key];
       const active =
         item.href === '/itens'

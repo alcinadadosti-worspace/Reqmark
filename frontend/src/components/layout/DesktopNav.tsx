@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { useLocation } from 'react-router-dom';
 import PillNav, { type PillNavItem } from '@/components/reactbits/PillNav/PillNav';
 import { usePrefersReducedMotion } from '@/hooks/useMediaQuery';
-import { NAV_ITEMS } from './navItems';
+import { navItemsFor } from './navItems';
 
 /**
  * Navegação do desktop (React Bits `PillNav`).
@@ -17,7 +17,7 @@ export function DesktopNav({ isAdmin }: { isAdmin: boolean }) {
 
   const items = useMemo<PillNavItem[]>(
     () =>
-      NAV_ITEMS.filter((item) => !item.adminOnly || isAdmin).map((item) => ({
+      navItemsFor(isAdmin).map((item) => ({
         label: item.label,
         href: item.href,
         ariaLabel: item.label,
@@ -26,7 +26,7 @@ export function DesktopNav({ isAdmin }: { isAdmin: boolean }) {
   );
 
   const active =
-    NAV_ITEMS.filter((item) => !item.adminOnly || isAdmin).find((item) =>
+    navItemsFor(isAdmin).find((item) =>
       item.href === '/itens' ? location.pathname === '/itens' : location.pathname.startsWith(item.href)
     )?.href ?? '/itens';
 

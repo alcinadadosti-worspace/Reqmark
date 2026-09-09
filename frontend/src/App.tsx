@@ -21,6 +21,25 @@ const AgendaPage = lazy(() => import('@/features/agenda/AgendaPage'));
 const AdminPage = lazy(() => import('@/features/admin/AdminPage'));
 const NotFoundPage = lazy(() => import('@/features/misc/NotFoundPage'));
 
+/**
+ * Rotas que só fazem sentido para quem faz requisições.
+ *
+ * A administradora decide, não pede: "Nova" e a lista "Minhas requisições" não
+ * aparecem no menu dela, e chegar nelas pela URL mostrava telas escritas para
+ * outra pessoa ("uma conversa privada entre você e a Suzana" — sendo ela a
+ * Suzana). Aqui ela é levada ao painel.
+ *
+ * O TICKET (`/requisicoes/:id`) fica de fora de propósito: é para lá que o
+ * botão "Abrir no app" do card do Slack aponta, e ela precisa abri-lo.
+ */
+function RequesterOnly({ children }: { children: ReactNode }) {
+  const identity = useIdentityStore((state) => state.identity);
+
+  if (identity?.role === 'admin') return <Navigate to="/admin" replace />;
+
+  return <>{children}</>;
+}
+
 function RequireIdentity({ children }: { children: ReactNode }) {
   const identity = useIdentityStore((state) => state.identity);
   const location = useLocation();
@@ -97,17 +116,21 @@ export default function App() {
           <Route
             path="/nova"
             element={
-              <AnimatedOutlet>
-                <WizardPage />
-              </AnimatedOutlet>
+              <RequesterOnly>
+                <AnimatedOutlet>
+                  <WizardPage />
+                </AnimatedOutlet>
+              </RequesterOnly>
             }
           />
           <Route
             path="/requisicoes"
             element={
-              <AnimatedOutlet>
-                <MyRequestsPage />
-              </AnimatedOutlet>
+              <RequesterOnly>
+                <AnimatedOutlet>
+                  <MyRequestsPage />
+                </AnimatedOutlet>
+              </RequesterOnly>
             }
           />
           <Route

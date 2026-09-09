@@ -25,10 +25,19 @@ export function MyRequestsProvider({ children }: { children: ReactNode }) {
   const identity = useIdentityStore((state) => state.identity);
   const { data, loading, error } = useMyRequests(identity?.slackId);
 
-  // Na demonstração, duas requisições de exemplo passam para quem entrou, para
-  // "Minhas requisições" e o sino terem conteúdo seja quem for a pessoa.
+  /*
+    Na demonstração, duas requisições de exemplo passam para quem entrou, para
+    "Minhas requisições" e o sino terem conteúdo seja quem for a pessoa.
+
+    Menos para a administradora: ela não faz requisições, e adotá-las em nome
+    dela transformava a demonstração do papel de admin em algo impossível — a
+    fila mostrava pedidos que eram dela mesma, e o ticket oferecia "Cancelar
+    requisição" no lugar de aprovar e reprovar.
+  */
   useEffect(() => {
-    if (isDemoMode() && identity) demoStore.adoptIdentity(identity.slackId, identity.name);
+    if (isDemoMode() && identity && identity.role !== 'admin') {
+      demoStore.adoptIdentity(identity.slackId, identity.name);
+    }
   }, [identity]);
 
   const value = useMemo<MyRequestsData>(() => {

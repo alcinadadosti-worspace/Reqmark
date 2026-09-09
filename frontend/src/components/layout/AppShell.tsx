@@ -281,7 +281,8 @@ export function AppShell({ children }: { children: ReactNode }) {
           <DesktopNav isAdmin={Boolean(isAdmin)} />
 
           <div className="ml-auto flex shrink-0 items-center gap-2">
-            <NotificationBell unread={unread} />
+            {/* O sino leva a "Minhas requisições": não cabe para quem não as faz. */}
+            {isAdmin ? null : <NotificationBell unread={unread} />}
             <IdentityMenu cursorEnabled={cursorEnabled} onCursorChange={setCursorEnabled} />
           </div>
         </div>
