@@ -6,6 +6,7 @@
  * levar alguns segundos para acordar, e o `ack` nao pode esperar por isso.
  */
 import type { BlockAction, ButtonAction } from '@slack/bolt';
+import { env } from '../env';
 import { createLogger, describeError } from '../lib/logger';
 import { getRequest } from '../lib/repo';
 import { DecisionError, adminActor, decideRequest } from '../services/decisions';
@@ -13,6 +14,31 @@ import { ACTION_APPROVE, ACTION_OPEN_APP, ACTION_REJECT, VIEW_REJECT, rejectModa
 import { postDm, postEphemeral, slackApp } from './client';
 
 const log = createLogger('slack:actions');
+
+/**
+ * So a administradora decide.
+ *
+ * O card e enviado apenas para a DM dela, mas uma mensagem do Slack pode ser
+ * encaminhada, e o botao continua funcionando no card encaminhado. Sem esta
+ * checagem, quem recebesse o encaminhamento aprovaria a requisicao — e ficaria
+ * registrado no nome dela, porque `adminActor()` sempre usa o ADMIN_SLACK_ID.
+ */
+async function refuseIfNotAdmin(
+  userId: string,
+  channel: string | undefined
+): Promise<boolean> {
+  if (userId === env.adminSlackId) return false;
+
+  log.warn(`${userId} tentou decidir pelo Slack sem ser a administradora`);
+  if (channel) {
+    await postEphemeral(
+      channel,
+      userId,
+      'Só a administradora do Marketing pode aprovar ou reprovar requisições.'
+    );
+  }
+  return true;
+}
 
 /** Mensagem efemera de "ja decidida" (fluxo 7 da secao 9). */
 async function warnAlreadyDecided(
@@ -43,6 +69,7 @@ export function registerSlackActions(): void {
     const channel = body.channel?.id;
 
     if (!requestId) return;
+    if (await refuseIfNotAdmin(user, channel)) return;
 
     try {
       const actor = await adminActor();
@@ -89,6 +116,7 @@ export function registerSlackActions(): void {
     const channel = body.channel?.id;
 
     if (!requestId) return;
+    if (await refuseIfNotAdmin(user, channel)) return;
 
     try {
       const request = await getRequest(requestId);
@@ -135,6 +163,11 @@ export function registerSlackActions(): void {
     }
 
     await ack();
+
+    if (body.user.id !== env.adminSlackId) {
+      log.warn(`${body.user.id} tentou reprovar pelo modal sem ser a administradora`);
+      return;
+    }
 
     try {
       const actor = await adminActor();
