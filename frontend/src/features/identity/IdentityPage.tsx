@@ -206,28 +206,9 @@ export default function IdentityPage() {
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
                     transition={{ duration: 0.18 }}
-                    className="mt-6 text-center text-sm leading-relaxed text-muted/80"
+                    className="mt-6 text-center text-2xs text-muted/60"
                   >
-                    Comece a digitar — por exemplo{' '}
-                    <button
-                      type="button"
-                      onClick={() => setTerm('rafa')}
-                      className="text-gold-300 underline decoration-dotted underline-offset-4 hover:text-gold-200"
-                    >
-                      rafa
-                    </button>{' '}
-                    ou as iniciais{' '}
-                    <button
-                      type="button"
-                      onClick={() => setTerm('rm')}
-                      className="text-gold-300 underline decoration-dotted underline-offset-4 hover:text-gold-200"
-                    >
-                      RM
-                    </button>
-                    .
-                    <span className="mt-2 block text-2xs text-muted/60">
-                      {users.length} pessoas cadastradas
-                    </span>
+                    {users.length} pessoas cadastradas
                   </motion.p>
                 ) : results.length === 0 ? (
                   <motion.div
