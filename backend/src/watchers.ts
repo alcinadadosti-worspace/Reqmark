@@ -243,6 +243,39 @@ export async function runCatchUp(): Promise<void> {
 
 let unsubscribers: (() => void)[] = [];
 
+/*
+  Religa os listeners quando um deles cai.
+
+  O SDK do Firestore encerra um `onSnapshot` de vez ao receber erro (queda de
+  rede, token expirado, indisponibilidade transitoria). So registrar o erro no
+  log significava que, a partir dali, nenhuma requisicao nova chegava ao Slack
+  ate o proximo boot — e com o monitor de keep-alive o processo nao reinicia
+  nunca.
+
+  Antes de religar, roda o catch-up: o que aconteceu enquanto o listener
+  estava morto continua com a flag ligada e precisa ser processado. Backoff
+  exponencial (5 s ate 5 min) para nao martelar o Firestore numa queda longa;
+  zera assim que um snapshot volta a chegar.
+*/
+let restartTimer: ReturnType<typeof setTimeout> | null = null;
+let restartDelayMs = 5_000;
+const RESTART_MAX_MS = 5 * 60_000;
+
+function scheduleRestart(reason: string): void {
+  if (restartTimer) return;
+  log.warn(`religando os listeners em ${Math.round(restartDelayMs / 1000)} s (${reason})`);
+  restartTimer = setTimeout(async () => {
+    restartTimer = null;
+    restartDelayMs = Math.min(restartDelayMs * 3, RESTART_MAX_MS);
+    await runCatchUp();
+    startWatchers();
+  }, restartDelayMs);
+}
+
+function markHealthy(): void {
+  restartDelayMs = 5_000;
+}
+
 export function startWatchers(): void {
   stopWatchers();
 
@@ -251,12 +284,16 @@ export function startWatchers(): void {
     .where('notify.adminPending', '==', true)
     .onSnapshot(
       (snapshot) => {
+        markHealthy();
         for (const change of snapshot.docChanges()) {
           if (change.type === 'removed') continue;
           void notifyNewRequest(toRequest(change.doc));
         }
       },
-      (error) => log.error('listener de requests caiu', describeError(error))
+      (error) => {
+        log.error('listener de requests caiu', describeError(error));
+        scheduleRestart('requests');
+      }
     );
 
   const eventsUnsub = collections
@@ -265,6 +302,7 @@ export function startWatchers(): void {
     .where('notify.pending', '==', true)
     .onSnapshot(
       (snapshot) => {
+        markHealthy();
         for (const change of snapshot.docChanges()) {
           if (change.type === 'removed') continue;
           const requestId = change.doc.ref.parent.parent?.id;
@@ -272,7 +310,10 @@ export function startWatchers(): void {
           void notifyEvent(requestId, toEvent(change.doc));
         }
       },
-      (error) => log.error('listener de events caiu', describeError(error))
+      (error) => {
+        log.error('listener de events caiu', describeError(error));
+        scheduleRestart('events');
+      }
     );
 
   unsubscribers = [requestsUnsub, eventsUnsub];
@@ -280,6 +321,10 @@ export function startWatchers(): void {
 }
 
 export function stopWatchers(): void {
+  if (restartTimer) {
+    clearTimeout(restartTimer);
+    restartTimer = null;
+  }
   for (const unsubscribe of unsubscribers) {
     try {
       unsubscribe();
