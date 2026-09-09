@@ -8,6 +8,7 @@
 import type { BlockAction, ButtonAction } from '@slack/bolt';
 import { env } from '../env';
 import { createLogger, describeError } from '../lib/logger';
+import { describeConflict } from '../lib/conflicts';
 import { getRequest } from '../lib/repo';
 import { DecisionError, adminActor, decideRequest } from '../services/decisions';
 import { ACTION_APPROVE, ACTION_OPEN_APP, ACTION_REJECT, VIEW_REJECT, rejectModal } from './blocks';
@@ -64,7 +65,12 @@ export function registerSlackActions(): void {
   slackApp.action<BlockAction<ButtonAction>>(ACTION_APPROVE, async ({ ack, body, action }) => {
     await ack();
 
-    const requestId = action.value;
+    // `<id>|force` quando o card mostrou o dialogo de confirmacao (ver
+    // `adminRequestBlocks`). Sem o sufixo, a aprovacao NAO pode forcar: entre o
+    // envio do card e o clique podem ter se passado dias, e um conflito que
+    // surgiu nesse meio-tempo nunca foi confirmado por ninguem.
+    const [requestId, flag] = (action.value ?? '').split('|');
+    const force = flag === 'force';
     const user = body.user.id;
     const channel = body.channel?.id;
 
@@ -78,11 +84,24 @@ export function registerSlackActions(): void {
         decision: 'approve',
         channel: 'slack',
         actor,
-        // O botao ja mostrou o dialogo de confirmacao quando havia conflito
-        // (ver `adminRequestBlocks`), entao chegar aqui significa "sim, mesmo assim".
-        force: true,
+        force,
       });
     } catch (error) {
+      if (error instanceof DecisionError && error.code === 'conflict') {
+        const details = error.details as { conflicts?: Parameters<typeof describeConflict>[0][] } | undefined;
+        const conflicts = (details?.conflicts ?? []).map(describeConflict);
+        if (channel) {
+          await postEphemeral(
+            channel,
+            user,
+            'Surgiu um conflito depois que este card foi enviado, então não aprovei:\n' +
+              conflicts.map((line) => '• ' + line).join('\n') +
+              '\nConfira pelo botão "Abrir no app" e, se quiser aprovar mesmo assim, faça por lá.'
+          );
+        }
+        return;
+      }
+
       if (error instanceof DecisionError && error.code === 'already_decided') {
         await warnAlreadyDecided(
           channel,

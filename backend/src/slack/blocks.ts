@@ -44,6 +44,19 @@ function periodLine(request: MarketingRequest): string {
   return `${formatRangeBR(request.startDate, request.endDate)} (${formatDayCount(request.days)})`;
 }
 
+/**
+ * Corta um texto no limite que o Slack aceita para aquele campo.
+ *
+ * Quando um bloco estoura o limite, o Slack recusa a MENSAGEM INTEIRA com
+ * `invalid_blocks`. Como o `postDm` devolve null nesse caso e a flag
+ * `notify.adminPending` fica ligada, o card seria reenviado a cada boot e
+ * nunca chegaria — um silêncio permanente justamente nas requisições com
+ * conflito, que são as que mais precisam de decisão.
+ */
+function clip(text: string, max: number): string {
+  return text.length <= max ? text : `${text.slice(0, max - 1)}…`;
+}
+
 /** Seção "Conflitos": nenhum ✅ ou os detalhes ⚠️. */
 function conflictBlock(blocking: Conflict[], warnings: Conflict[]): KnownBlock {
   if (blocking.length === 0 && warnings.length === 0) {
@@ -91,7 +104,8 @@ export function adminRequestBlocks({ request, blocking, warnings }: AdminCardOpt
     },
     {
       type: 'section',
-      text: { type: 'mrkdwn', text: `*Para que vai usar*\n${request.purpose}` },
+      // Limite de uma section: 3000 caracteres.
+      text: { type: 'mrkdwn', text: clip(`*Para que vai usar*\n${request.purpose}`, 2900) },
     },
     conflictBlock(blocking, warnings),
     {
@@ -103,14 +117,18 @@ export function adminRequestBlocks({ request, blocking, warnings }: AdminCardOpt
           action_id: ACTION_APPROVE,
           style: 'primary',
           text: { type: 'plain_text', text: '✅ Aprovar', emoji: true },
-          value: request.id,
+          // O sufixo diz ao handler que ESTE card já mostrou o diálogo de
+          // confirmação. Só assim a aprovação pode forçar por cima de conflito:
+          // um conflito que surgir depois do envio não foi confirmado por ninguém.
+          value: blocking.length > 0 ? `${request.id}|force` : request.id,
           ...(blocking.length > 0
             ? {
                 confirm: {
                   title: { type: 'plain_text' as const, text: 'Aprovar mesmo com conflito?' },
                   text: {
                     type: 'mrkdwn' as const,
-                    text: blocking.map(describeConflict).join('\n'),
+                    // Limite do texto do diálogo de confirmação: 300 caracteres.
+                    text: clip(blocking.map(describeConflict).join('\n'), 300),
                   },
                   confirm: { type: 'plain_text' as const, text: 'Aprovar assim mesmo' },
                   deny: { type: 'plain_text' as const, text: 'Cancelar' },
