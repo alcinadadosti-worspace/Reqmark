@@ -36,6 +36,46 @@ type View = 'mes' | 'itens' | 'mapa';
 
 const WEEKDAYS = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'];
 
+interface DayItem {
+  itemId: string;
+  itemName: string;
+  icon: string;
+  /** `true` se ALGUMA requisição daquele dia com este item já foi aprovada. */
+  approved: boolean;
+}
+
+/**
+ * Itens distintos de um dia — é o que o quadrado mostra.
+ *
+ * Distintos porque o que importa na grade é *qual material* está comprometido,
+ * não quantos pedidos existem: duas requisições da mesma tenda desenham uma
+ * tenda só. A contagem detalhada fica na legenda embaixo e no drawer do dia.
+ *
+ * Aprovada manda na cor: um item já em campo não pode parecer pré-reserva.
+ */
+function itemsOfDay(requests: MarketingRequest[]): DayItem[] {
+  const found = new Map<string, DayItem>();
+
+  for (const request of requests) {
+    const approved = request.status === 'approved';
+    for (const line of request.items) {
+      const current = found.get(line.itemId);
+      if (!current) {
+        found.set(line.itemId, {
+          itemId: line.itemId,
+          itemName: line.itemName,
+          icon: line.icon,
+          approved,
+        });
+      } else if (approved) {
+        current.approved = true;
+      }
+    }
+  }
+
+  return [...found.values()];
+}
+
 /**
  * Agenda (`/agenda`) — seção 8.5.
  *
@@ -248,6 +288,7 @@ export default function AgendaPage() {
               const approved = requests.filter((request) => request.status === 'approved').length;
               const pending = requests.length - approved;
               const isToday = current === day;
+              const dayItems = itemsOfDay(requests);
 
               return (
                 <button
@@ -256,13 +297,17 @@ export default function AgendaPage() {
                   onClick={() => requests.length > 0 && setSelectedDay(current)}
                   disabled={requests.length === 0}
                   className={cn(
-                    'flex min-h-[4.25rem] flex-col rounded-xl border p-1.5 text-left transition-colors sm:min-h-[5.5rem]',
+                    'flex min-h-[5rem] flex-col rounded-xl border p-1.5 text-left transition-colors sm:min-h-[6.5rem]',
                     inMonth ? 'border-onyx-700/70 bg-onyx-900/40' : 'border-transparent opacity-35',
                     requests.length > 0 && 'hover:border-gold-500/40 hover:bg-onyx-800/60',
                     requests.length === 0 && 'cursor-default',
                     isToday && '!border-gold-500/60 bg-gold-500/8'
                   )}
-                  aria-label={`${formatDayLong(current)}: ${requests.length} ação(ões)`}
+                  aria-label={
+                    dayItems.length > 0
+                      ? `${formatDayLong(current)}: ${dayItems.map((entry) => entry.itemName).join(', ')}`
+                      : `${formatDayLong(current)}: nenhuma ação`
+                  }
                 >
                   <span
                     className={cn(
@@ -273,17 +318,29 @@ export default function AgendaPage() {
                     {Number(current.slice(8, 10))}
                   </span>
 
-                  <span className="mt-1 flex flex-1 flex-wrap content-start gap-1">
-                    {requests.slice(0, 3).map((request) => (
-                      <span
-                        key={request.id}
+                  {/*
+                    O ícone do material, e não uma bolinha: o mesmo desenho que
+                    a pessoa viu no catálogo e escolheu no wizard. Bate o olho
+                    na grade e já sabe o que está fora — sem precisar abrir o
+                    dia para descobrir.
+                  */}
+                  <span className="mt-1 flex flex-1 flex-wrap content-start items-start gap-1.5">
+                    {dayItems.slice(0, 3).map((entry) => (
+                      <ItemIcon
+                        key={entry.itemId}
+                        name={entry.icon}
+                        strokeWidth={1.4}
                         className={cn(
-                          'h-1.5 w-1.5 rounded-full',
-                          request.status === 'approved' ? 'bg-status-approved' : 'bg-gold-400'
+                          'h-6 w-6 sm:h-7 sm:w-7',
+                          entry.approved ? 'text-status-approved' : 'text-gold-400'
                         )}
-                        aria-hidden
                       />
                     ))}
+                    {dayItems.length > 3 ? (
+                      <span className="tabular self-center text-2xs font-medium text-muted">
+                        +{dayItems.length - 3}
+                      </span>
+                    ) : null}
                   </span>
 
                   {requests.length > 0 ? (
