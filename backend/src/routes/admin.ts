@@ -36,10 +36,19 @@ function param(request: Request, name: string): string {
   return value ?? '';
 }
 
-/** Chave do rate limit: o IP visto pelo Render (que fica atrás de proxy). */
+/**
+ * Chave do rate limit: o IP real de quem chamou.
+ *
+ * Usa `request.ip`, e NAO o `x-forwarded-for` cru. O cabecalho e enviado pelo
+ * cliente, e o proxy do Render acrescenta o IP verdadeiro ao que ja veio — o
+ * primeiro item da lista e, portanto, escolhido por quem chama. Ler dali
+ * deixava o bloqueio de 8 tentativas ser burlado a cada requisicao, bastando
+ * variar o cabecalho, e o PIN ficava exposto a forca bruta.
+ *
+ * Com `app.set('trust proxy', 1)` (index.ts), o Express ja descarta os saltos
+ * confiaveis e entrega o endereco certo.
+ */
 function clientKey(request: Request): string {
-  const forwarded = request.headers['x-forwarded-for'];
-  if (typeof forwarded === 'string' && forwarded.length > 0) return forwarded.split(',')[0].trim();
   return request.ip ?? 'desconhecido';
 }
 
