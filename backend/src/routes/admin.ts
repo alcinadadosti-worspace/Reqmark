@@ -11,7 +11,7 @@ import { env } from '../env';
 import { FieldValue, collections, serverTimestamp } from '../firebase';
 import { checkLoginRate, clearLoginRate, issueToken, verifyPin, verifyToken } from '../lib/adminAuth';
 import { createLogger, describeError } from '../lib/logger';
-import { getUser } from '../lib/repo';
+import { getOccupancyRequests, getUser } from '../lib/repo';
 import { DecisionError, decideRequest, markReturned, sendAdminMessage } from '../services/decisions';
 
 const log = createLogger('admin');
@@ -283,6 +283,27 @@ export function createAdminRouter(): Router {
     '/items/:id',
     handle(async (request, response) => {
       const itemId = param(request, 'id');
+
+      /*
+        Apagar um item que esta em requisicao pendente ou aprovada faz ele sumir
+        do motor de disponibilidade e da agenda — mas as requisicoes continuam
+        existindo, notificando e ocupando um item que ninguem mais enxerga. O
+        README ja orienta a desativar em vez de remover; aqui a API garante.
+      */
+      const emUso = (await getOccupancyRequests()).filter((entry) =>
+        entry.items.some((line) => line.itemId === itemId)
+      );
+      if (emUso.length > 0) {
+        fail(
+          response,
+          409,
+          'item_in_use',
+          `Este item está em ${emUso.length} requisição(ões) pendente(s) ou aprovada(s). ` +
+            'Desmarque "Item ativo" em vez de remover — o histórico continua legível.'
+        );
+        return;
+      }
+
       await collections.items().doc(itemId).delete();
       log.info(`item removido: ${itemId}`);
       response.json({ ok: true });
