@@ -6,6 +6,7 @@ import {
   Ban,
   CalendarRange,
   CheckCircle2,
+  KeyRound,
   MapPin,
   RotateCcw,
   Send,
@@ -27,6 +28,7 @@ import { useRequestTicket } from '@/hooks/useRequests';
 import { useIdentityStore } from '@/store/identity';
 import { usePrefersReducedMotion } from '@/hooks/useMediaQuery';
 import { cancelRequest, markTicketRead, sendMessage } from '@/lib/collections';
+import { AdminPinDialog } from '@/features/identity/AdminPinDialog';
 import { ApiError, api, getAdminToken } from '@/lib/api';
 import { evaluatePeriod } from '@/lib/availability';
 import { formatDayCount, formatDayFriendly, formatInstant } from '@/lib/dates';
@@ -43,6 +45,7 @@ export default function TicketPage() {
 
   const identity = useIdentityStore((state) => state.identity);
   const adminUnlocked = useIdentityStore((state) => state.adminUnlocked);
+  const unlockAdmin = useIdentityStore((state) => state.unlockAdmin);
   const { occupancyRequests, stockById } = useAppData();
   const reduced = usePrefersReducedMotion();
 
@@ -55,6 +58,8 @@ export default function TicketPage() {
 
   const bottomRef = useRef<HTMLDivElement>(null);
   const lastStatus = useRef<string | null>(null);
+
+  const [askPin, setAskPin] = useState(false);
 
   const isMine = Boolean(identity && request && request.requesterId === identity.slackId);
   const isAdmin = identity?.role === 'admin';
@@ -230,6 +235,29 @@ export default function TicketPage() {
             </p>
           ) : null}
 
+          {/*
+            A administradora chega aqui pelo botão "Abrir no app" do card do
+            Slack — quase sempre numa aba nova, onde `adminUnlocked` é falso e o
+            token do PIN (que vive no `sessionStorage`) não existe. Antes, o
+            bloco de ações simplesmente não era renderizado: ela via o ticket
+            sem nenhum botão e sem nenhuma pista do motivo.
+          */}
+          {isAdmin && !isMine && !canModerate && (request.status === 'pending' || request.status === 'approved') ? (
+            <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-onyx-700/60 pt-4">
+              <p className="min-w-0 flex-1 text-sm leading-relaxed text-muted">
+                Informe o PIN para {request.status === 'pending' ? 'aprovar ou reprovar' : 'marcar a devolução'} por aqui.
+              </p>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setAskPin(true)}
+                icon={<KeyRound className="h-4 w-4" aria-hidden />}
+              >
+                Destravar
+              </Button>
+            </div>
+          ) : null}
+
           {/* Ações */}
           {canCancel || canModerate ? (
             <div className="mt-4 flex flex-wrap gap-2 border-t border-onyx-700/60 pt-4">
@@ -403,6 +431,17 @@ export default function TicketPage() {
       </GlassCard>
 
       {/* Confirmação de cancelamento */}
+      <AdminPinDialog
+        open={askPin}
+        name={identity?.name ?? ''}
+        allowSkip={false}
+        onClose={() => setAskPin(false)}
+        onSuccess={() => {
+          setAskPin(false);
+          unlockAdmin();
+        }}
+      />
+
       <Modal
         open={cancelOpen}
         onClose={() => setCancelOpen(false)}
