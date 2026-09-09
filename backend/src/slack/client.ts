@@ -91,6 +91,17 @@ export async function postDm(
 
     return result.ts ? { channel, ts: result.ts } : null;
   } catch (error) {
+    /*
+      O canal em cache pode ter morrido — a pessoa saiu do workspace, ou o
+      Slack invalidou a DM. Sem tirar do cache, TODA DM futura para ela
+      falharia ate o proximo boot, mesmo que o `conversations.open` de novo
+      resolvesse. Um erro desses joga o canal fora; a proxima tentativa reabre.
+    */
+    const code = (error as { data?: { error?: string } })?.data?.error;
+    if (code === 'channel_not_found' || code === 'not_in_channel' || code === 'is_archived') {
+      dmChannelCache.delete(slackUserId);
+      log.warn(`canal de DM de ${slackUserId} descartado do cache (${code})`);
+    }
     log.error(`falha ao enviar DM para ${slackUserId}`, describeError(error));
     return null;
   }
