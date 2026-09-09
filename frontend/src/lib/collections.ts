@@ -20,6 +20,7 @@ import {
   serverTimestamp,
   updateDoc,
   where,
+  writeBatch,
   type DocumentData,
   type QueryDocumentSnapshot,
   type QuerySnapshot,
@@ -300,13 +301,23 @@ export async function cancelRequest(input: {
     return demoStore.cancelRequest(input.requestId, input.requesterId, input.requesterName);
   }
 
-  await updateDoc(refs.request(input.requestId), {
+  /*
+    Os dois num lote so.
+
+    Em duas escritas separadas, uma falha na segunda deixava a requisicao
+    cancelada sem ninguem avisar a administradora — e sem conserto no proximo
+    boot, porque a flag que o catch-up procura (`notify.pending`) mora
+    justamente no evento que nao chegou a existir.
+  */
+  const batch = writeBatch(getDb());
+
+  batch.update(refs.request(input.requestId), {
     status: 'cancelled',
     cancelledAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   });
 
-  await addDoc(refs.events(input.requestId), {
+  batch.set(doc(refs.events(input.requestId)), {
     type: 'cancelled',
     authorId: input.requesterId,
     authorName: input.requesterName,
@@ -314,6 +325,8 @@ export async function cancelRequest(input: {
     notify: { pending: true },
     createdAt: serverTimestamp(),
   });
+
+  await batch.commit();
 }
 
 /** Zera o contador de nao lidas do proprio lado ao abrir o ticket. */
