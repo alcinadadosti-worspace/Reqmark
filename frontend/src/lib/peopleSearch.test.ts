@@ -1,8 +1,29 @@
 import { describe, expect, it } from 'vitest';
 import { searchPeople, shortInitials, wordInitials } from './peopleSearch';
-import { USERS } from '@/shared/users';
 
-const nomes = (query: string) => searchPeople(USERS, query).map((user) => user.name);
+/**
+ * Elenco proprio, e nao o cadastro de producao.
+ *
+ * Estes testes sao sobre o ALGORITMO de busca — acento, meio do nome, iniciais,
+ * ordenacao. Amarra-los a `@/shared/users` fazia uma mudanca de RH quebrar a
+ * suite: foi o que aconteceu quando o cadastro passou a ser so os lideres de
+ * setor e os nomes usados nas assercoes deixaram de existir.
+ *
+ * Os nomes abaixo cobrem cada caso de proposito: acentuados, "ana" no comeco e
+ * no meio, sobrenome repetido e iniciais que colidem.
+ */
+const PESSOAS = [
+  { slackId: 'u1', name: 'José Fernando dos Santos Santana Ramos' },
+  { slackId: 'u2', name: 'Josenildo Alves da Silva Júnior' },
+  { slackId: 'u3', name: 'Maria Taciane Pereira Barbosa' },
+  { slackId: 'u4', name: 'Ana Clara de Matos Chagas' },
+  { slackId: 'u5', name: 'Suzana Martins Tavares' },
+  { slackId: 'u6', name: 'Rafaela Alves Mendes' },
+  { slackId: 'u7', name: 'Carlos Eduardo Silva de Oliveira' },
+  { slackId: 'u8', name: 'Alcina' },
+];
+
+const nomes = (query: string) => searchPeople(PESSOAS, query).map((user) => user.name);
 
 describe('iniciais', () => {
   it('ignora conectivos', () => {
@@ -20,8 +41,8 @@ describe('iniciais', () => {
 
 describe('busca por nome', () => {
   it('exige pelo menos dois caracteres', () => {
-    expect(searchPeople(USERS, '')).toEqual([]);
-    expect(searchPeople(USERS, 'r')).toEqual([]);
+    expect(searchPeople(PESSOAS, '')).toEqual([]);
+    expect(searchPeople(PESSOAS, 'r')).toEqual([]);
   });
 
   it('encontra nomes acentuados sem digitar o acento', () => {
@@ -36,8 +57,8 @@ describe('busca por nome', () => {
 
   it('coloca quem começa com o termo antes de quem só o contém', () => {
     const encontrados = nomes('ana');
+    // "Suzana" e "Santana" também contêm "ana", mas não começam com ele.
     expect(encontrados[0].startsWith('Ana')).toBe(true);
-    // "Nathália" contém "ana"? não; mas "Amanda" não começa com "ana".
     expect(encontrados).toContain('Ana Clara de Matos Chagas');
   });
 
