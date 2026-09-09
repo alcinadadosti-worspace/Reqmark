@@ -55,6 +55,8 @@ export const socketState = {
   desconexoes: 0,
   ultimoEvento: null as string | null,
   ultimoEventoEm: null as string | null,
+  /** Preenchido quando a conexao nem chega a subir (token invalido, por exemplo). */
+  erro: null as string | null,
 };
 
 /*

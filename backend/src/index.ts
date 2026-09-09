@@ -123,7 +123,29 @@ async function main(): Promise<void> {
     na mao. No modo HTTP o proprio Bolt cuida das duas coisas.
   */
   if (usingSocketMode) {
-    await slackApp.start();
+    /*
+      Uma falha no Modo Socket NAO pode derrubar o servico.
+
+      Foi o que aconteceu quando o token de app virou invalido: o
+      `SocketModeClient` lancou `invalid_auth`, o erro subiu ate o
+      `main().catch` e o processo saiu — levando junto o site, o painel e o
+      `/health`. Um problema de integracao com o Slack derrubou tudo o que
+      nao dependia do Slack.
+
+      Agora a falha e registrada e o Express sobe do mesmo jeito: o app
+      continua no ar, e o `/health` diz o que aconteceu com a conexao.
+    */
+    try {
+      await slackApp.start();
+    } catch (error) {
+      socketState.erro = describeError(error);
+      log.error(
+        'Modo Socket não subiu — o app segue no ar, mas os botões do Slack não vão responder. ' +
+          'Confira o SLACK_APP_TOKEN (ou apague a variável para voltar ao modo HTTP).',
+        describeError(error)
+      );
+    }
+
     await new Promise<void>((resolve) => {
       app.listen(env.port, () => resolve());
     });
