@@ -312,28 +312,24 @@ export default function AgendaPage() {
         </GlassCard>
       ) : view === 'mapa' ? (
         <GlassCard className="overflow-hidden p-0">
-          {pins.length === 0 ? (
-            <EmptyState
-              className="!py-16"
-              icon={<MapIcon className="h-7 w-7" strokeWidth={1.2} aria-hidden />}
-              title="Nenhum material em campo hoje"
-              description="Quando uma reserva aprovada começar, o item aparece aqui com a cidade onde está e a data em que volta."
-            />
-          ) : (
-            <>
-              {/* A altura vai no `className`, que o componente aplica no próprio
-                  MapContainer. Numa div externa o mapa nasce sem altura e o
-                  Leaflet desenha os tiles fora da área visível. */}
-              <LazyActivationsMap pins={pins} className="h-[26rem] w-full sm:h-[32rem]" />
-              <p className="border-t border-gold-500/15 px-4 py-3 text-2xs leading-relaxed text-muted">
-                {pins.length === 1
-                  ? '1 material em campo agora.'
-                  : `${pins.length} materiais em campo agora.`}{' '}
-                Só aparecem reservas já aprovadas e em curso — pré-reservas pendentes ainda não
-                ocupam o item.
-              </p>
-            </>
-          )}
+          {/*
+            O mapa aparece SEMPRE, mesmo sem nenhum pino.
+
+            Antes, sem material em campo, ele dava lugar a um aviso de texto — e
+            numa aba chamada "No mapa" isso lê como funcionalidade quebrada. O
+            mapa vazio, enquadrado em Alagoas, já responde a pergunta ("nada em
+            campo") sem parecer erro; a legenda embaixo explica o resto.
+
+            A altura vai no `className`, que o componente aplica no próprio
+            MapContainer. Numa div externa o mapa nasce sem altura e o Leaflet
+            desenha os tiles fora da área visível.
+          */}
+          <LazyActivationsMap pins={pins} className="h-[26rem] w-full sm:h-[32rem]" />
+          <p className="border-t border-gold-500/15 px-4 py-3 text-2xs leading-relaxed text-muted">
+            {pins.length === 0
+              ? 'Nenhum material em campo hoje. Quando uma reserva aprovada começar, o item aparece aqui com a cidade onde está e a data em que volta.'
+              : `${pins.length === 1 ? '1 material' : `${pins.length} materiais`} em campo agora. Só aparecem reservas já aprovadas e em curso — pré-reservas pendentes ainda não ocupam o item.`}
+          </p>
         </GlassCard>
       ) : timelineItems.length === 0 ? (
         <EmptyState
