@@ -21,10 +21,11 @@ const ADMIN_SLACK_ID = 'U09F9LWM6MC';
 
 /** Cidades frequentes. As coordenadas sao reserva; o geocoder confirma no seed. */
 const CITIES = [
-  { name: 'Penedo', state: 'AL', lat: -10.2906, lng: -36.5861 },
-  { name: 'Arapiraca', state: 'AL', lat: -9.7519, lng: -36.6611 },
   { name: 'Palmeira dos Índios', state: 'AL', lat: -9.4058, lng: -36.6281 },
-  { name: 'Maceió', state: 'AL', lat: -9.6658, lng: -35.7353 },
+  { name: 'São Sebastião', state: 'AL', lat: -9.9333, lng: -36.5667 },
+  { name: 'Teotônio Vilela', state: 'AL', lat: -9.9042, lng: -36.355 },
+  { name: 'Coruripe', state: 'AL', lat: -10.1256, lng: -36.1756 },
+  { name: 'Penedo', state: 'AL', lat: -10.2906, lng: -36.5861 },
 ];
 
 /**
