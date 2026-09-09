@@ -16,7 +16,18 @@ const log = createLogger('slack');
 export const receiver = new ExpressReceiver({
   signingSecret: env.slackSigningSecret,
   endpoints: '/slack/events',
-  processBeforeResponse: true,
+  /*
+    `false` (o padrao) e o certo para um processo que fica de pe.
+
+    Com `true` o Bolt so devolve o HTTP depois que o handler INTEIRO termina
+    — e o handler de aprovar le itens e ocupacao, roda a transacao, grava o
+    evento, edita o card e manda DM ao solicitante. O Slack exige resposta em
+    3 s: num servico acordando, isso estoura. A administradora via "algo deu
+    errado" mesmo quando tinha funcionado, e o Slack REENVIAVA o clique, que
+    caia em "ja decidida". `true` existe para funcoes serverless, que morrem
+    ao responder; aqui o `ack()` responde na hora e o trabalho segue.
+  */
+  processBeforeResponse: false,
 });
 
 export const slackApp = new App({
