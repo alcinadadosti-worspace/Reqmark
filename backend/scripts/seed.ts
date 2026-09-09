@@ -162,6 +162,7 @@ async function seedUsers(): Promise<void> {
         {
           slackId: user.slackId,
           name: user.name,
+          sector: user.sector,
           role: user.slackId === ADMIN_SLACK_ID ? 'admin' : 'requester',
           active: true,
           createdAt: serverTimestamp(),
@@ -176,6 +177,27 @@ async function seedUsers(): Promise<void> {
   }
 
   console.log(`  ✓ ${created} pessoa(s) gravada(s). Admin: ${ADMIN_SLACK_ID}`);
+
+  /*
+    Quem saiu da lista e DESATIVADO, nao apagado.
+
+    As requisicoes guardam `requesterName` no proprio documento, entao o
+    historico continua legivel — mas apagar a pessoa quebraria qualquer
+    consulta por `requesterId`. Desativar tira da tela de identidade (o app
+    filtra por `active`) e preserva o passado.
+  */
+  const naLista = new Set(USERS.map((user) => user.slackId));
+  const todos = await collections.users().get();
+  const saindo = todos.docs.filter((doc) => !naLista.has(doc.id) && doc.data().active !== false);
+
+  if (saindo.length > 0) {
+    const batch = db().batch();
+    for (const doc of saindo) batch.update(doc.ref, { active: false });
+    await batch.commit();
+    console.log(`  ✓ ${saindo.length} pessoa(s) fora da lista desativada(s).`);
+  } else {
+    console.log('  · ninguém para desativar.');
+  }
 }
 
 async function seedItems(): Promise<void> {
@@ -212,17 +234,32 @@ async function seedSettings(): Promise<void> {
     await new Promise((resolve) => setTimeout(resolve, 400));
   }
 
+  /*
+    O `appUrl` ja gravado nao e sobrescrito.
+
+    O seed roda da maquina de quem publica, onde `env.appUrl` cai no padrao
+    `http://localhost:8080` — em producao quem preenche e o RENDER_EXTERNAL_URL.
+    Sobrescrever aqui significava que rodar o seed de novo (para acrescentar
+    uma pessoa, por exemplo) apontava a configuracao de producao para a maquina
+    de alguem. Mesma logica do contador, que tambem e preservado.
+  */
+  const atual = await collections.settingsApp().get();
+  const appUrlGravada = String(atual.data()?.appUrl ?? '');
+  const appUrl = appUrlGravada || env.appUrl;
+
   await collections.settingsApp().set(
     {
       adminSlackId: ADMIN_SLACK_ID,
-      appUrl: env.appUrl,
+      appUrl,
       cities,
       purposeTypes: DEFAULT_PURPOSE_TYPES,
       updatedAt: serverTimestamp(),
     },
     { merge: true }
   );
-  console.log(`  ✓ settings/app gravado (appUrl: ${env.appUrl})`);
+  console.log(
+    `  ✓ settings/app gravado (appUrl: ${appUrl}${appUrlGravada ? ' — preservada' : ''})`
+  );
 
   // Nunca sobrescreve o contador: zerar apagaria a numeração já em uso.
   const counters = await collections.settingsCounters().get();
